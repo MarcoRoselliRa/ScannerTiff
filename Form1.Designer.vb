@@ -136,13 +136,14 @@ Partial Class Form1
         dgvFiles.MultiSelect = False
         dgvFiles.Name = "dgvFiles"
         dgvFiles.RowHeadersWidth = 82
+        dgvFiles.ScrollBars = ScrollBars.Vertical
         dgvFiles.SelectionMode = DataGridViewSelectionMode.FullRowSelect
-        dgvFiles.Size = New Size(697, 494)
+        dgvFiles.Size = New Size(747, 494)
         dgvFiles.TabIndex = 10
         ' 
         ' picPreview
         ' 
-        picPreview.Location = New Point(768, 271)
+        picPreview.Location = New Point(846, 266)
         picPreview.Name = "picPreview"
         picPreview.Size = New Size(430, 489)
         picPreview.SizeMode = PictureBoxSizeMode.Zoom

@@ -138,6 +138,7 @@ Public Class ScanMonitorWorker
         Dim targetFolder = WorkDir
         Dim subd = (If(SubDir, "")).Trim()
         If subd <> "" Then targetFolder = Path.Combine(WorkDir, subd)
+        RaiseEvent LogLine("TARGET FOLDER: " & targetFolder)
         Directory.CreateDirectory(targetFolder)
 
         Dim nextNum = GetNextGlobalNumber(WorkDir) ' globale su tutto WORK (anche sottocartelle)

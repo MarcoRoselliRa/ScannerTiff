@@ -437,4 +437,57 @@ Public Class Form1
         End If
     End Sub
 
+    Private Sub dgvFiles_CellPainting(sender As Object, e As DataGridViewCellPaintingEventArgs) Handles dgvFiles.CellPainting
+        If e.RowIndex < 0 Then Return
+        If e.ColumnIndex < 0 Then Return
+
+        If dgvFiles.Columns(e.ColumnIndex).Name <> "colRotate" Then Return
+
+        Dim isSelected As Boolean = (e.State And DataGridViewElementStates.Selected) = DataGridViewElementStates.Selected
+        Dim isAlt As Boolean = (e.RowIndex Mod 2 = 1)
+
+        Dim back As Color = If(isSelected, SystemColors.Highlight,
+                               If(isAlt, Color.FromArgb(220, 220, 220), Color.White))
+        Dim fore As Color = If(isSelected, SystemColors.HighlightText, dgvFiles.ForeColor)
+
+        ' 1) sfondo
+        Using br As New SolidBrush(back)
+            e.Graphics.FillRectangle(br, e.CellBounds)
+        End Using
+
+        ' 2) bordo cella
+        Using p As New Pen(dgvFiles.GridColor)
+            e.Graphics.DrawRectangle(p, New Rectangle(e.CellBounds.X, e.CellBounds.Y, e.CellBounds.Width - 1, e.CellBounds.Height - 1))
+        End Using
+
+        ' 3) area pulsante dropdown (a destra)
+        Dim btnW As Integer = 30
+        Dim btnRect As New Rectangle(e.CellBounds.Right - btnW - 2, e.CellBounds.Y + 2, btnW, e.CellBounds.Height - 4)
+
+        ' pulsante combo
+        ControlPaint.DrawComboButton(e.Graphics, btnRect, ButtonState.Normal)
+
+        ' 4) testo (valore)
+        Dim textRect As New Rectangle(e.CellBounds.X + 6, e.CellBounds.Y + 2, e.CellBounds.Width - btnW - 12, e.CellBounds.Height - 4)
+        Dim txt As String = If(e.FormattedValue Is Nothing, "", e.FormattedValue.ToString())
+
+        TextRenderer.DrawText(e.Graphics, txt, dgvFiles.Font, textRect, fore,
+                              TextFormatFlags.VerticalCenter Or TextFormatFlags.Left Or TextFormatFlags.EndEllipsis)
+
+        e.Handled = True
+    End Sub
+    Private Sub txtSubDir_TextChanged(sender As Object, e As EventArgs) Handles txtSubDir.TextChanged
+        Dim subd = txtSubDir.Text.Trim()
+
+        ' aggiorna subito il worker (vale "da lì in poi")
+        If _worker IsNot Nothing Then
+            _worker.SubDir = subd
+        End If
+
+        ' salva anche nelle impostazioni
+        My.Settings.SubDir = subd
+        My.Settings.Save()
+    End Sub
+
+
 End Class
