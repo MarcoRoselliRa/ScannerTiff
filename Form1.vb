@@ -8,7 +8,15 @@ Public Class Form1
     Private _list As New System.ComponentModel.BindingList(Of ScanItem)()
     Private _ui As SynchronizationContext
     Private _isMonitoring As Boolean = False
-
+    Private _subDirColors As New Dictionary(Of String, Color)
+    Private _colorPalette As Color() = {
+    Color.FromArgb(235, 245, 255), ' azzurro
+    Color.FromArgb(235, 255, 235), ' verde chiaro
+    Color.FromArgb(255, 245, 230), ' arancio chiaro
+    Color.FromArgb(245, 235, 255), ' lilla
+    Color.FromArgb(255, 235, 235)  ' rosino
+}
+    Private _nextColorIndex As Integer = 0
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         _ui = SynchronizationContext.Current
         _items.DataSource = _list
@@ -489,5 +497,32 @@ Public Class Form1
         My.Settings.Save()
     End Sub
 
+    Private Sub dgvFiles_RowPrePaint(sender As Object, e As DataGridViewRowPrePaintEventArgs) Handles dgvFiles.RowPrePaint
+        If e.RowIndex < 0 Then Return
+
+        Dim row = dgvFiles.Rows(e.RowIndex)
+        Dim item = TryCast(row.DataBoundItem, ScanItem)
+        If item Is Nothing Then Return
+
+        ' Se è nella root (nessuna sottocartella)
+        If Not item.RelPath.Contains("\"c) Then
+            Dim isAlt As Boolean = (e.RowIndex Mod 2 = 1)
+            row.DefaultCellStyle.BackColor =
+                If(isAlt, Color.FromArgb(220, 220, 220), Color.White)
+            Return
+        End If
+
+        ' Estrai nome sottocartella (prima parte prima dello slash)
+        Dim subDirName = item.RelPath.Split("\"c)(0)
+
+        ' Se non ha ancora colore, assegnane uno
+        If Not _subDirColors.ContainsKey(subDirName) Then
+            Dim col = _colorPalette(_nextColorIndex Mod _colorPalette.Length)
+            _subDirColors(subDirName) = col
+            _nextColorIndex += 1
+        End If
+
+        row.DefaultCellStyle.BackColor = _subDirColors(subDirName)
+    End Sub
 
 End Class
