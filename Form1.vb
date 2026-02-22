@@ -85,14 +85,14 @@ Public Class Form1
         dgvFiles.RowsDefaultCellStyle.BackColor = Color.White
     End Sub
 
-    Private Sub btnBrowseIn_Click(sender As Object, e As EventArgs) Handles btnBrowseIn.Click
-        If FolderBrowserDialog1.ShowDialog() = DialogResult.OK Then
+    Private Sub btnBrowseIn_Click(sender As Object, e As EventArgs)
+        If FolderBrowserDialog1.ShowDialog = DialogResult.OK Then
             txtInDir.Text = FolderBrowserDialog1.SelectedPath
         End If
     End Sub
 
-    Private Sub btnBrowseWork_Click(sender As Object, e As EventArgs) Handles btnBrowseWork.Click
-        If FolderBrowserDialog1.ShowDialog() = DialogResult.OK Then
+    Private Sub btnBrowseWork_Click(sender As Object, e As EventArgs)
+        If FolderBrowserDialog1.ShowDialog = DialogResult.OK Then
             txtWorkDir.Text = FolderBrowserDialog1.SelectedPath
         End If
     End Sub
@@ -264,8 +264,8 @@ Public Class Form1
     End Sub
 
 
-    Private Sub btnBrowseOut_Click(sender As Object, e As EventArgs) Handles btnBrowseOut.Click
-        If FolderBrowserDialog1.ShowDialog() = DialogResult.OK Then
+    Private Sub btnBrowseOut_Click(sender As Object, e As EventArgs)
+        If FolderBrowserDialog1.ShowDialog = DialogResult.OK Then
             txtOutDir.Text = FolderBrowserDialog1.SelectedPath
         End If
     End Sub
@@ -524,5 +524,39 @@ Public Class Form1
 
         row.DefaultCellStyle.BackColor = _subDirColors(subDirName)
     End Sub
+
+
+    Private Sub btnSettings_Click(sender As Object, e As EventArgs) Handles btnSettings.Click
+        Dim f As New FrmSettings With {
+            .InDir = txtInDir.Text,
+            .WorkDir = txtWorkDir.Text,
+            .OutDir = txtOutDir.Text,
+            .SubDir = txtSubDir.Text,
+            .LogText = txtLog.Text
+        }
+
+        If f.ShowDialog(Me) = DialogResult.OK Then
+            txtInDir.Text = f.InDir
+            txtWorkDir.Text = f.WorkDir
+            txtOutDir.Text = f.OutDir
+            txtSubDir.Text = f.SubDir
+            txtLog.Text = f.LogText
+
+            ' salva settings
+            My.Settings.InDir = txtInDir.Text
+            My.Settings.WorkDir = txtWorkDir.Text
+            My.Settings.OutDir = txtOutDir.Text
+            My.Settings.SubDir = txtSubDir.Text
+            My.Settings.Save()
+
+            ' aggiorna worker “live” (senza restart)
+            If _worker IsNot Nothing Then
+                _worker.InDir = txtInDir.Text
+                _worker.WorkDir = txtWorkDir.Text
+                _worker.SubDir = txtSubDir.Text
+            End If
+        End If
+    End Sub
+
 
 End Class
