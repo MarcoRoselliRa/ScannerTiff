@@ -24,6 +24,7 @@ Public Class Form1
 
         dgvFiles.Columns.Clear()
 
+
         Dim c1 As New DataGridViewTextBoxColumn With {
             .Name = "colRelPath",
             .DataPropertyName = "RelPath",
@@ -36,17 +37,18 @@ Public Class Form1
         Dim c2 As New DataGridViewTextBoxColumn With {
             .Name = "colSize",
             .DataPropertyName = "FileSizeBytes",
-            .HeaderText = "Bytes",
-            .Width = 90,
+            .HeaderText = "FileSize",
+            .Width = 115,
             .ReadOnly = True
         }
+        c2.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
         dgvFiles.Columns.Add(c2)
 
         Dim c3 As New DataGridViewTextBoxColumn With {
             .Name = "colPage",
             .DataPropertyName = "PageInfo",
             .HeaderText = "Pagina",
-            .Width = 120,
+            .Width = 200,
             .ReadOnly = True
         }
         dgvFiles.Columns.Add(c3)
@@ -55,12 +57,18 @@ Public Class Form1
             .Name = "colRotate",
             .DataPropertyName = "Rotate",
             .HeaderText = "Ruota",
-            .Width = 80,
+            .Width = 90,
             .ReadOnly = False
         }
         colRot.Items.AddRange(New Object() {0, 90, 180, 270})
         dgvFiles.Columns.Add(colRot)
 
+        dgvFiles.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(220, 220, 220)
+        dgvFiles.EnableHeadersVisualStyles = False
+        dgvFiles.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(230, 230, 230)
+        dgvFiles.ColumnHeadersDefaultCellStyle.Font = New Font(dgvFiles.Font, FontStyle.Bold)
+        dgvFiles.RowHeadersWidth = 40
+        dgvFiles.AllowUserToAddRows = False
 
     End Sub
 
@@ -389,5 +397,31 @@ Public Class Form1
             Return ""
         End Try
     End Function
+
+    Private Function FormatBytes(bytes As Long) As String
+        If bytes < 1024 Then Return bytes & " B"
+
+        Dim kb As Double = bytes / 1024.0
+        If kb < 1024 Then Return kb.ToString("0.0") & " KB"
+
+        Dim mb As Double = kb / 1024.0
+        If mb < 1024 Then Return mb.ToString("0.0") & " MB"
+
+        Dim gb As Double = mb / 1024.0
+        Return gb.ToString("0.00") & " GB"
+    End Function
+    Private Sub dgvFiles_CellFormatting(sender As Object, e As DataGridViewCellFormattingEventArgs) Handles dgvFiles.CellFormatting
+        If e.RowIndex < 0 Then Return
+
+        If dgvFiles.Columns(e.ColumnIndex).DataPropertyName = "FileSizeBytes" Then
+            If e.Value IsNot Nothing Then
+                Dim b As Long
+                If Long.TryParse(e.Value.ToString(), b) Then
+                    e.Value = FormatBytes(b)
+                    e.FormattingApplied = True
+                End If
+            End If
+        End If
+    End Sub
 
 End Class

@@ -43,6 +43,7 @@ Public Class ScanMonitorWorker
         AddHandler _watcher.Renamed, AddressOf OnRenamed
 
         RaiseEvent LogLine("START watching: " & InDir)
+        EnqueueExisting()
 
         _workerTask = Task.Run(Function() WorkerLoop(_cts.Token))
     End Sub
@@ -219,6 +220,19 @@ Public Class ScanMonitorWorker
         Next
         Return maxNum + 1
     End Function
+    Private Sub EnqueueExisting()
+        Try
+            ' prende i tif già presenti in IN quando si avvia
+            For Each f In Directory.EnumerateFiles(InDir, "*.tif", SearchOption.TopDirectoryOnly)
+                EnqueueOnce(f)
+            Next
+            For Each f In Directory.EnumerateFiles(InDir, "*.tiff", SearchOption.TopDirectoryOnly)
+                EnqueueOnce(f)
+            Next
+        Catch ex As Exception
+            RaiseEvent LogLine("EnqueueExisting error: " & ex.Message)
+        End Try
+    End Sub
 
 End Class
 
