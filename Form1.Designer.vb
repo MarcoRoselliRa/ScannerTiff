@@ -39,6 +39,7 @@ Partial Class Form1
         Label4 = New Label()
         txtOutDir = New TextBox()
         btnBrowseOut = New Button()
+        btnDelete = New Button()
         CType(dgvFiles, ComponentModel.ISupportInitialize).BeginInit()
         CType(picPreview, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
@@ -47,7 +48,7 @@ Partial Class Form1
         ' 
         txtInDir.Location = New Point(42, 44)
         txtInDir.Name = "txtInDir"
-        txtInDir.Size = New Size(188, 39)
+        txtInDir.Size = New Size(549, 39)
         txtInDir.TabIndex = 0
         ' 
         ' Label1
@@ -61,7 +62,7 @@ Partial Class Form1
         ' 
         ' btnBrowseIn
         ' 
-        btnBrowseIn.Location = New Point(295, 50)
+        btnBrowseIn.Location = New Point(597, 44)
         btnBrowseIn.Name = "btnBrowseIn"
         btnBrowseIn.Size = New Size(137, 42)
         btnBrowseIn.TabIndex = 2
@@ -71,7 +72,7 @@ Partial Class Form1
         ' Label2
         ' 
         Label2.AutoSize = True
-        Label2.Location = New Point(51, 99)
+        Label2.Location = New Point(42, 86)
         Label2.Name = "Label2"
         Label2.Size = New Size(169, 32)
         Label2.TabIndex = 3
@@ -79,16 +80,16 @@ Partial Class Form1
         ' 
         ' txtWorkDir
         ' 
-        txtWorkDir.Location = New Point(50, 143)
+        txtWorkDir.Location = New Point(42, 121)
         txtWorkDir.Name = "txtWorkDir"
-        txtWorkDir.Size = New Size(236, 39)
+        txtWorkDir.Size = New Size(549, 39)
         txtWorkDir.TabIndex = 4
         ' 
         ' btnBrowseWork
         ' 
-        btnBrowseWork.Location = New Point(310, 143)
+        btnBrowseWork.Location = New Point(597, 119)
         btnBrowseWork.Name = "btnBrowseWork"
-        btnBrowseWork.Size = New Size(121, 43)
+        btnBrowseWork.Size = New Size(137, 43)
         btnBrowseWork.TabIndex = 5
         btnBrowseWork.Text = "Button1"
         btnBrowseWork.UseVisualStyleBackColor = True
@@ -96,7 +97,7 @@ Partial Class Form1
         ' Label3
         ' 
         Label3.AutoSize = True
-        Label3.Location = New Point(536, 25)
+        Label3.Location = New Point(782, 14)
         Label3.Name = "Label3"
         Label3.Size = New Size(99, 32)
         Label3.TabIndex = 6
@@ -104,14 +105,14 @@ Partial Class Form1
         ' 
         ' txtSubDir
         ' 
-        txtSubDir.Location = New Point(537, 65)
+        txtSubDir.Location = New Point(782, 49)
         txtSubDir.Name = "txtSubDir"
         txtSubDir.Size = New Size(134, 39)
         txtSubDir.TabIndex = 7
         ' 
         ' btnStart
         ' 
-        btnStart.Location = New Point(526, 136)
+        btnStart.Location = New Point(1062, 28)
         btnStart.Name = "btnStart"
         btnStart.Size = New Size(91, 60)
         btnStart.TabIndex = 8
@@ -121,7 +122,7 @@ Partial Class Form1
         ' btnStop
         ' 
         btnStop.Enabled = False
-        btnStop.Location = New Point(640, 134)
+        btnStop.Location = New Point(1176, 26)
         btnStop.Name = "btnStop"
         btnStop.Size = New Size(91, 60)
         btnStop.TabIndex = 9
@@ -134,34 +135,33 @@ Partial Class Form1
         dgvFiles.Location = New Point(52, 266)
         dgvFiles.MultiSelect = False
         dgvFiles.Name = "dgvFiles"
-        dgvFiles.ReadOnly = True
         dgvFiles.RowHeadersWidth = 82
         dgvFiles.SelectionMode = DataGridViewSelectionMode.FullRowSelect
-        dgvFiles.Size = New Size(497, 633)
+        dgvFiles.Size = New Size(697, 494)
         dgvFiles.TabIndex = 10
         ' 
         ' picPreview
         ' 
         picPreview.Location = New Point(768, 271)
         picPreview.Name = "picPreview"
-        picPreview.Size = New Size(430, 639)
+        picPreview.Size = New Size(430, 489)
         picPreview.SizeMode = PictureBoxSizeMode.Zoom
         picPreview.TabIndex = 11
         picPreview.TabStop = False
         ' 
         ' txtLog
         ' 
-        txtLog.Location = New Point(596, 750)
+        txtLog.Location = New Point(52, 788)
         txtLog.Multiline = True
         txtLog.Name = "txtLog"
         txtLog.ScrollBars = ScrollBars.Vertical
-        txtLog.Size = New Size(381, 191)
+        txtLog.Size = New Size(1146, 191)
         txtLog.TabIndex = 12
         ' 
         ' Label4
         ' 
         Label4.AutoSize = True
-        Label4.Location = New Point(52, 185)
+        Label4.Location = New Point(42, 162)
         Label4.Name = "Label4"
         Label4.Size = New Size(148, 32)
         Label4.TabIndex = 13
@@ -169,25 +169,35 @@ Partial Class Form1
         ' 
         ' txtOutDir
         ' 
-        txtOutDir.Location = New Point(50, 221)
+        txtOutDir.Location = New Point(42, 197)
         txtOutDir.Name = "txtOutDir"
-        txtOutDir.Size = New Size(236, 39)
+        txtOutDir.Size = New Size(549, 39)
         txtOutDir.TabIndex = 14
         ' 
         ' btnBrowseOut
         ' 
-        btnBrowseOut.Location = New Point(324, 221)
+        btnBrowseOut.Location = New Point(597, 189)
         btnBrowseOut.Name = "btnBrowseOut"
-        btnBrowseOut.Size = New Size(116, 47)
+        btnBrowseOut.Size = New Size(137, 47)
         btnBrowseOut.TabIndex = 15
         btnBrowseOut.Text = "Button1"
         btnBrowseOut.UseVisualStyleBackColor = True
+        ' 
+        ' btnDelete
+        ' 
+        btnDelete.Location = New Point(820, 209)
+        btnDelete.Name = "btnDelete"
+        btnDelete.Size = New Size(154, 38)
+        btnDelete.TabIndex = 16
+        btnDelete.Text = "Cancella"
+        btnDelete.UseVisualStyleBackColor = True
         ' 
         ' Form1
         ' 
         AutoScaleDimensions = New SizeF(13F, 32F)
         AutoScaleMode = AutoScaleMode.Font
-        ClientSize = New Size(1309, 982)
+        ClientSize = New Size(1309, 1040)
+        Controls.Add(btnDelete)
         Controls.Add(btnBrowseOut)
         Controls.Add(txtOutDir)
         Controls.Add(Label4)
@@ -229,5 +239,6 @@ Partial Class Form1
     Friend WithEvents Label4 As Label
     Friend WithEvents txtOutDir As TextBox
     Friend WithEvents btnBrowseOut As Button
+    Friend WithEvents btnDelete As Button
 
 End Class

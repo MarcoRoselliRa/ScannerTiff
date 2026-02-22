@@ -7,6 +7,7 @@ Public Class Form1
     Private _items As New BindingSource()
     Private _list As New System.ComponentModel.BindingList(Of ScanItem)()
     Private _ui As SynchronizationContext
+    Private _isMonitoring As Boolean = False
 
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         _ui = SynchronizationContext.Current
@@ -14,7 +15,6 @@ Public Class Form1
         txtInDir.Text = My.Settings.InDir
         txtWorkDir.Text = My.Settings.WorkDir
         txtSubDir.Text = My.Settings.SubDir
-        ' txtOutDir.Text = My.Settings.OutDir   ' lo useremo quando aggiungi OUT
         txtOutDir.Text = My.Settings.OutDir
 
 
@@ -22,31 +22,46 @@ Public Class Form1
 
         dgvFiles.Columns.Clear()
 
-        dgvFiles.Columns.Add(New DataGridViewTextBoxColumn With {
-        .DataPropertyName = "RelPath",
-        .HeaderText = "File",
-        .Width = 220
-    })
+        dgvFiles.Columns.Clear()
 
-        dgvFiles.Columns.Add(New DataGridViewTextBoxColumn With {
-        .DataPropertyName = "FileSizeBytes",
-        .HeaderText = "Bytes",
-        .Width = 90
-    })
+        Dim c1 As New DataGridViewTextBoxColumn With {
+            .Name = "colRelPath",
+            .DataPropertyName = "RelPath",
+            .HeaderText = "File",
+            .Width = 220,
+            .ReadOnly = True
+        }
+        dgvFiles.Columns.Add(c1)
 
-        dgvFiles.Columns.Add(New DataGridViewTextBoxColumn With {
-        .DataPropertyName = "PageInfo",
-        .HeaderText = "Pagina",
-        .Width = 120
-    })
+        Dim c2 As New DataGridViewTextBoxColumn With {
+            .Name = "colSize",
+            .DataPropertyName = "FileSizeBytes",
+            .HeaderText = "Bytes",
+            .Width = 90,
+            .ReadOnly = True
+        }
+        dgvFiles.Columns.Add(c2)
+
+        Dim c3 As New DataGridViewTextBoxColumn With {
+            .Name = "colPage",
+            .DataPropertyName = "PageInfo",
+            .HeaderText = "Pagina",
+            .Width = 120,
+            .ReadOnly = True
+        }
+        dgvFiles.Columns.Add(c3)
 
         Dim colRot As New DataGridViewComboBoxColumn With {
-        .DataPropertyName = "Rotate",
-        .HeaderText = "Ruota",
-        .Width = 80
-    }
+            .Name = "colRotate",
+            .DataPropertyName = "Rotate",
+            .HeaderText = "Ruota",
+            .Width = 80,
+            .ReadOnly = False
+        }
         colRot.Items.AddRange(New Object() {0, 90, 180, 270})
         dgvFiles.Columns.Add(colRot)
+
+
     End Sub
 
     Private Sub btnBrowseIn_Click(sender As Object, e As EventArgs) Handles btnBrowseIn.Click
@@ -62,25 +77,44 @@ Public Class Form1
     End Sub
     Private Sub btnStart_Click(sender As Object, e As EventArgs) Handles btnStart.Click
         Try
+            ' salva settings
+            My.Settings.InDir = txtInDir.Text
+            My.Settings.WorkDir = txtWorkDir.Text
+            My.Settings.SubDir = txtSubDir.Text
+            My.Settings.OutDir = txtOutDir.Text
+            My.Settings.Save()
+
             If _worker Is Nothing Then
                 _worker = New ScanMonitorWorker()
-                AddHandler _worker.LogLine, AddressOf Worker_LogLine
-                AddHandler _worker.ItemAdded, AddressOf Worker_ItemAdded
-                AddHandler _worker.LastScanChanged, AddressOf Worker_LastScanChanged
-
+            Else
+                ' se per caso era rimasto attivo, lo fermiamo e ripartiamo puliti
+                Try : _worker.Stop() : Catch : End Try
             End If
+
+            ' (ri)collega sempre gli eventi
+            RemoveHandler _worker.LogLine, AddressOf Worker_LogLine
+            RemoveHandler _worker.ItemAdded, AddressOf Worker_ItemAdded
+            RemoveHandler _worker.LastScanChanged, AddressOf Worker_LastScanChanged
+
+            AddHandler _worker.LogLine, AddressOf Worker_LogLine
+            AddHandler _worker.ItemAdded, AddressOf Worker_ItemAdded
+            AddHandler _worker.LastScanChanged, AddressOf Worker_LastScanChanged
 
             _worker.InDir = txtInDir.Text
             _worker.WorkDir = txtWorkDir.Text
             _worker.SubDir = txtSubDir.Text
-            My.Settings.InDir = txtInDir.Text
-            My.Settings.WorkDir = txtWorkDir.Text
-            My.Settings.SubDir = txtSubDir.Text
-            ' My.Settings.OutDir = txtOutDir.Text
 
-            My.Settings.Save()
+            ' log di controllo
+            Worker_LogLine("START premuto")
+            Worker_LogLine("IN: " & _worker.InDir)
+            Worker_LogLine("WORK: " & _worker.WorkDir)
+            Worker_LogLine("SUB: " & _worker.SubDir)
+
+            ' mostra subito eventuali file già presenti in WORK (così capisci che la griglia funziona)
+            LoadExistingFiles()
 
             _worker.Start()
+            _isMonitoring = True
 
             btnStart.Enabled = False
             btnStop.Enabled = True
@@ -89,9 +123,41 @@ Public Class Form1
         End Try
     End Sub
 
+    Private Sub LoadExistingFiles()
+        Try
+            _list.Clear()
+
+            Dim work = txtWorkDir.Text
+            If String.IsNullOrWhiteSpace(work) Then Return
+            If Not Directory.Exists(work) Then Return
+
+            For Each f In Directory.EnumerateFiles(work, "*.tif*", SearchOption.AllDirectories)
+                Dim rel = f.Substring(work.Length).TrimStart("\"c)
+                Dim fi As New FileInfo(f)
+
+                _list.Add(New ScanItem With {
+                .RelPath = rel,
+                .FullPath = f,
+                .FileSizeBytes = fi.Length,
+                .PageInfo = GetPageInfo(f),
+                .Rotate = 0,
+                .CreatedAt = fi.CreationTime
+            })
+            Next
+
+            ' anteprima ultimo, se c'è
+            If _list.Count > 0 Then
+                ShowPreview(_list(_list.Count - 1).FullPath)
+            End If
+        Catch ex As Exception
+            Worker_LogLine("LoadExistingFiles error: " & ex.Message)
+        End Try
+    End Sub
+
+
     Private Sub btnStop_Click(sender As Object, e As EventArgs) Handles btnStop.Click
         Try
-            If _worker IsNot Nothing Then _worker.Stop()
+            If _worker IsNot Nothing Then _worker.Stop() : _isMonitoring = False
         Catch
         End Try
 
@@ -116,6 +182,7 @@ Public Class Form1
         If _ui Is Nothing Then Return
         _ui.Post(Sub(state)
                      Try
+                         item.PageInfo = GetPageInfo(item.FullPath)
                          _list.Add(item)
                      Catch
                      End Try
@@ -135,7 +202,7 @@ Public Class Form1
         If _ui Is Nothing Then Return
         _ui.Post(Sub(state)
                      Try
-                         ShowPreview(item.FullPath)
+                         ShowPreview(item.FullPath, item.Rotate)
 
                          If dgvFiles.Rows.Count > 0 Then
                              dgvFiles.ClearSelection()
@@ -149,22 +216,32 @@ Public Class Form1
 
 
 
-    Private Sub ShowPreview(path As String)
+    Private Sub ShowPreview(path As String, Optional rotate As Integer = 0)
         Try
             If Not File.Exists(path) Then Return
 
-            ' evita blocchi file: carica in memoria
             Using fs As New FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
                 Using img = Image.FromStream(fs)
+                    Dim bmp As New Bitmap(img)
+
+                    Select Case rotate
+                        Case 90
+                            bmp.RotateFlip(RotateFlipType.Rotate90FlipNone)
+                        Case 180
+                            bmp.RotateFlip(RotateFlipType.Rotate180FlipNone)
+                        Case 270
+                            bmp.RotateFlip(RotateFlipType.Rotate270FlipNone)
+                    End Select
+
                     picPreview.Image?.Dispose()
-                    picPreview.Image = New Bitmap(img)
+                    picPreview.Image = bmp
                 End Using
             End Using
         Catch ex As Exception
-            ' TIFF multipagina a volte non piace a GDI+: lo gestiamo nel passo successivo con Magick.NET
             Debug.WriteLine("Preview error: " & ex.Message)
         End Try
     End Sub
+
 
     Private Sub btnBrowseOut_Click(sender As Object, e As EventArgs) Handles btnBrowseOut.Click
         If FolderBrowserDialog1.ShowDialog() = DialogResult.OK Then
@@ -172,5 +249,145 @@ Public Class Form1
         End If
     End Sub
 
+    Private Sub btnDelete_Click(sender As Object, e As EventArgs) Handles btnDelete.Click
+        If dgvFiles.CurrentRow Is Nothing Then Return
+
+        Dim item = TryCast(dgvFiles.CurrentRow.DataBoundItem, ScanItem)
+        If item Is Nothing Then Return
+
+        Dim wasMonitoring = _isMonitoring
+
+        If MessageBox.Show("Eliminare questo file?" & Environment.NewLine & item.RelPath,
+                       "Conferma",
+                       MessageBoxButtons.YesNo,
+                       MessageBoxIcon.Question) <> DialogResult.Yes Then Return
+
+        Try
+            ' Se stava monitorando lo fermiamo temporaneamente
+            If wasMonitoring AndAlso _worker IsNot Nothing Then
+                _worker.Stop()
+            End If
+
+            ' Libera anteprima
+            If picPreview.Image IsNot Nothing Then
+                picPreview.Image.Dispose()
+                picPreview.Image = Nothing
+            End If
+
+            ' Elimina file
+            If File.Exists(item.FullPath) Then File.Delete(item.FullPath)
+
+            ' Rinumera
+            RenumberAllWorkFiles()
+
+            ' Ricarica lista
+            LoadExistingFiles()
+
+        Catch ex As Exception
+            MessageBox.Show(ex.Message, "Errore", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        Finally
+            ' Ripristina stato originale
+            If wasMonitoring AndAlso _worker IsNot Nothing Then
+                _worker.Start()
+            End If
+        End Try
+    End Sub
+
+
+    Private Sub RenumberAllWorkFiles()
+        Dim root = txtWorkDir.Text
+        If String.IsNullOrWhiteSpace(root) Then Return
+        If Not Directory.Exists(root) Then Return
+
+        ' Prendi tutti i tif (anche in sottocartelle)
+        Dim files = Directory.EnumerateFiles(root, "*.tif*", SearchOption.AllDirectories).ToList()
+
+        ' Ordina per numero se è numerico, altrimenti per nome
+        files.Sort(Function(a, b)
+                       Dim na As Integer, nb As Integer
+                       Dim sa = Path.GetFileNameWithoutExtension(a)
+                       Dim sb = Path.GetFileNameWithoutExtension(b)
+
+                       Dim ha = Integer.TryParse(sa, na)
+                       Dim hb = Integer.TryParse(sb, nb)
+
+                       If ha AndAlso hb Then Return na.CompareTo(nb)
+                       Return String.Compare(a, b, StringComparison.OrdinalIgnoreCase)
+                   End Function)
+
+        ' 1) Rinominare tutto in temporanei (per evitare collisioni)
+        Dim tempList As New List(Of (tempPath As String, finalFolder As String))()
+
+        For Each f In files
+            Dim folder = Path.GetDirectoryName(f)
+            Dim ext = If(Path.GetExtension(f).ToLowerInvariant() = ".tiff", ".tif", ".tif") ' uniformiamo a .tif
+            Dim tmp = Path.Combine(folder, "__tmp__" & Guid.NewGuid().ToString("N") & ext)
+            File.Move(f, tmp)
+            tempList.Add((tmp, folder))
+        Next
+
+        ' 2) Assegna nuovi numeri globali
+        Dim n As Integer = 1
+        For Each t In tempList
+            Dim finalName = n.ToString("D5") & ".tif"
+            Dim finalPath = Path.Combine(t.finalFolder, finalName)
+            File.Move(t.tempPath, finalPath)
+            n += 1
+        Next
+    End Sub
+
+    Private Sub dgvFiles_SelectionChanged(sender As Object, e As EventArgs) Handles dgvFiles.SelectionChanged
+        Dim item = GetSelectedItem()
+        If item Is Nothing Then Return
+        ShowPreview(item.FullPath, item.Rotate)
+    End Sub
+
+    Private Sub dgvFiles_CellValueChanged(sender As Object, e As DataGridViewCellEventArgs) Handles dgvFiles.CellValueChanged
+        If e.RowIndex < 0 Then Return
+        If dgvFiles.Columns(e.ColumnIndex).DataPropertyName <> "Rotate" Then Return
+
+        Dim item = TryCast(dgvFiles.Rows(e.RowIndex).DataBoundItem, ScanItem)
+        If item Is Nothing Then Return
+
+        ' aggiorna anteprima con nuova rotazione
+        ShowPreview(item.FullPath, item.Rotate)
+    End Sub
+
+    Private Sub dgvFiles_CurrentCellDirtyStateChanged(sender As Object, e As EventArgs) Handles dgvFiles.CurrentCellDirtyStateChanged
+        ' importante: fa scattare subito CellValueChanged quando cambi combobox
+        If dgvFiles.IsCurrentCellDirty Then
+            dgvFiles.CommitEdit(DataGridViewDataErrorContexts.Commit)
+        End If
+    End Sub
+
+    Private Function GetSelectedItem() As ScanItem
+        If dgvFiles.CurrentRow Is Nothing Then Return Nothing
+        Return TryCast(dgvFiles.CurrentRow.DataBoundItem, ScanItem)
+    End Function
+    Private Function GetPageInfo(path As String) As String
+        Try
+            Using fs As New FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
+                Using img = Image.FromStream(fs, False, False)
+                    Dim wPx = img.Width
+                    Dim hPx = img.Height
+
+                    Dim dpiX = img.HorizontalResolution
+                    Dim dpiY = img.VerticalResolution
+
+                    ' se DPI validi -> mm reali
+                    If dpiX > 1 AndAlso dpiY > 1 Then
+                        Dim wMm = (wPx / dpiX) * 25.4
+                        Dim hMm = (hPx / dpiY) * 25.4
+                        Return $"{Math.Round(wMm)}×{Math.Round(hMm)} mm"
+                    End If
+
+                    ' fallback
+                    Return $"{wPx}×{hPx} px"
+                End Using
+            End Using
+        Catch
+            Return ""
+        End Try
+    End Function
 
 End Class

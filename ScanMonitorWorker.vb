@@ -171,7 +171,7 @@ Public Class ScanMonitorWorker
         Dim lastLen As Long = -1
         Dim stableCount As Integer = 0
 
-        For i = 1 To 120 ' ~60s
+        For i = 1 To 600 ' ~60s
             ct.ThrowIfCancellationRequested()
 
             Try
