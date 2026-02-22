@@ -3,6 +3,8 @@ Imports System.Threading
 
 
 Public Class Form1
+    Private _logBuffer As New List(Of String)()
+    Private Const MaxLogLines As Integer = 500
     Private _worker As ScanMonitorWorker
     Private _items As New BindingSource()
     Private _list As New System.ComponentModel.BindingList(Of ScanItem)()
@@ -20,10 +22,7 @@ Public Class Form1
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         _ui = SynchronizationContext.Current
         _items.DataSource = _list
-        txtInDir.Text = My.Settings.InDir
-        txtWorkDir.Text = My.Settings.WorkDir
         txtSubDir.Text = My.Settings.SubDir
-        txtOutDir.Text = My.Settings.OutDir
 
 
         dgvFiles.DataSource = _items
@@ -85,24 +84,14 @@ Public Class Form1
         dgvFiles.RowsDefaultCellStyle.BackColor = Color.White
     End Sub
 
-    Private Sub btnBrowseIn_Click(sender As Object, e As EventArgs)
-        If FolderBrowserDialog1.ShowDialog = DialogResult.OK Then
-            txtInDir.Text = FolderBrowserDialog1.SelectedPath
-        End If
-    End Sub
 
-    Private Sub btnBrowseWork_Click(sender As Object, e As EventArgs)
-        If FolderBrowserDialog1.ShowDialog = DialogResult.OK Then
-            txtWorkDir.Text = FolderBrowserDialog1.SelectedPath
-        End If
-    End Sub
     Private Sub btnStart_Click(sender As Object, e As EventArgs) Handles btnStart.Click
         Try
             ' salva settings
-            My.Settings.InDir = txtInDir.Text
-            My.Settings.WorkDir = txtWorkDir.Text
+            _worker.InDir = My.Settings.InDir
+            _worker.WorkDir = My.Settings.WorkDir
+            _worker.SubDir = txtSubDir.Text.Trim()
             My.Settings.SubDir = txtSubDir.Text
-            My.Settings.OutDir = txtOutDir.Text
             My.Settings.Save()
 
             If _worker Is Nothing Then
@@ -121,9 +110,9 @@ Public Class Form1
             AddHandler _worker.ItemAdded, AddressOf Worker_ItemAdded
             AddHandler _worker.LastScanChanged, AddressOf Worker_LastScanChanged
 
-            _worker.InDir = txtInDir.Text
-            _worker.WorkDir = txtWorkDir.Text
-            _worker.SubDir = txtSubDir.Text
+            _worker.InDir = My.Settings.InDir
+            _worker.WorkDir = My.Settings.WorkDir
+            _worker.SubDir = txtSubDir.Text.Trim()
 
             ' log di controllo
             Worker_LogLine("START premuto")
@@ -148,7 +137,7 @@ Public Class Form1
         Try
             _list.Clear()
 
-            Dim work = txtWorkDir.Text
+            Dim work = My.Settings.WorkDir
             If String.IsNullOrWhiteSpace(work) Then Return
             If Not Directory.Exists(work) Then Return
 
@@ -188,10 +177,12 @@ Public Class Form1
 
     Private Sub Worker_LogLine(text As String)
         If _ui Is Nothing Then Return
+
         _ui.Post(Sub(state)
                      Try
-                         If txtLog IsNot Nothing Then
-                             txtLog.AppendText(text & Environment.NewLine)
+                         _logBuffer.Add(text)
+                         If _logBuffer.Count > MaxLogLines Then
+                             _logBuffer.RemoveRange(0, _logBuffer.Count - MaxLogLines)
                          End If
                      Catch
                      End Try
@@ -264,12 +255,6 @@ Public Class Form1
     End Sub
 
 
-    Private Sub btnBrowseOut_Click(sender As Object, e As EventArgs)
-        If FolderBrowserDialog1.ShowDialog = DialogResult.OK Then
-            txtOutDir.Text = FolderBrowserDialog1.SelectedPath
-        End If
-    End Sub
-
     Private Sub btnDelete_Click(sender As Object, e As EventArgs) Handles btnDelete.Click
         If dgvFiles.CurrentRow Is Nothing Then Return
 
@@ -316,7 +301,7 @@ Public Class Form1
 
 
     Private Sub RenumberAllWorkFiles()
-        Dim root = txtWorkDir.Text
+        Dim root = My.Settings.WorkDir
         If String.IsNullOrWhiteSpace(root) Then Return
         If Not Directory.Exists(root) Then Return
 
@@ -528,34 +513,12 @@ Public Class Form1
 
     Private Sub btnSettings_Click(sender As Object, e As EventArgs) Handles btnSettings.Click
         Dim f As New FrmSettings With {
-            .InDir = txtInDir.Text,
-            .WorkDir = txtWorkDir.Text,
-            .OutDir = txtOutDir.Text,
-            .SubDir = txtSubDir.Text,
-            .LogText = txtLog.Text
-        }
-
-        If f.ShowDialog(Me) = DialogResult.OK Then
-            txtInDir.Text = f.InDir
-            txtWorkDir.Text = f.WorkDir
-            txtOutDir.Text = f.OutDir
-            txtSubDir.Text = f.SubDir
-            txtLog.Text = f.LogText
-
-            ' salva settings
-            My.Settings.InDir = txtInDir.Text
-            My.Settings.WorkDir = txtWorkDir.Text
-            My.Settings.OutDir = txtOutDir.Text
-            My.Settings.SubDir = txtSubDir.Text
-            My.Settings.Save()
-
-            ' aggiorna worker “live” (senza restart)
-            If _worker IsNot Nothing Then
-                _worker.InDir = txtInDir.Text
-                _worker.WorkDir = txtWorkDir.Text
-                _worker.SubDir = txtSubDir.Text
-            End If
-        End If
+        .InDir = My.Settings.InDir,
+        .WorkDir = My.Settings.WorkDir,
+        .OutDir = My.Settings.OutDir,
+        .LogText = String.Join(Environment.NewLine, _logBuffer)
+    }
+        f.ShowDialog(Me)
     End Sub
 
 

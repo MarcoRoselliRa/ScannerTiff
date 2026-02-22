@@ -17,6 +17,11 @@
         OutDir = txtOutDir.Text
         LogText = txtLog.Text
 
+        My.Settings.InDir = txtInDir.Text
+        My.Settings.WorkDir = txtWorkDir.Text
+        My.Settings.OutDir = txtOutDir.Text
+        My.Settings.Save()
+
         Me.DialogResult = DialogResult.OK
         Me.Close()
     End Sub
@@ -24,5 +29,22 @@
     Private Sub btnClose_Click(sender As Object, e As EventArgs) Handles btnClose.Click
         Me.DialogResult = DialogResult.Cancel
         Me.Close()
+    End Sub
+    Private Sub btnBrowseIn_Click(sender As Object, e As EventArgs) Handles btnBrowseIn.Click
+        Using f As New FolderBrowserDialog()
+            If f.ShowDialog() = DialogResult.OK Then txtInDir.Text = f.SelectedPath
+        End Using
+    End Sub
+
+    Private Sub btnBrowseWork_Click(sender As Object, e As EventArgs) Handles btnBrowseWork.Click
+        Using f As New FolderBrowserDialog()
+            If f.ShowDialog() = DialogResult.OK Then txtWorkDir.Text = f.SelectedPath
+        End Using
+    End Sub
+
+    Private Sub btnBrowseOut_Click(sender As Object, e As EventArgs) Handles btnBrowseOut.Click
+        Using f As New FolderBrowserDialog()
+            If f.ShowDialog() = DialogResult.OK Then txtOutDir.Text = f.SelectedPath
+        End Using
     End Sub
 End Class
