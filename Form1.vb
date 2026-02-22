@@ -61,6 +61,8 @@ Public Class Form1
             .ReadOnly = False
         }
         colRot.Items.AddRange(New Object() {0, 90, 180, 270})
+        colRot.DefaultCellStyle.SelectionBackColor = dgvFiles.DefaultCellStyle.SelectionBackColor
+        colRot.DefaultCellStyle.SelectionForeColor = dgvFiles.DefaultCellStyle.SelectionForeColor
         dgvFiles.Columns.Add(colRot)
 
         dgvFiles.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(220, 220, 220)
@@ -70,6 +72,9 @@ Public Class Form1
         dgvFiles.RowHeadersWidth = 40
         dgvFiles.AllowUserToAddRows = False
 
+        dgvFiles.SelectionMode = DataGridViewSelectionMode.FullRowSelect
+        dgvFiles.MultiSelect = False
+        dgvFiles.RowsDefaultCellStyle.BackColor = Color.White
     End Sub
 
     Private Sub btnBrowseIn_Click(sender As Object, e As EventArgs) Handles btnBrowseIn.Click
@@ -413,14 +418,22 @@ Public Class Form1
     Private Sub dgvFiles_CellFormatting(sender As Object, e As DataGridViewCellFormattingEventArgs) Handles dgvFiles.CellFormatting
         If e.RowIndex < 0 Then Return
 
-        If dgvFiles.Columns(e.ColumnIndex).DataPropertyName = "FileSizeBytes" Then
-            If e.Value IsNot Nothing Then
-                Dim b As Long
-                If Long.TryParse(e.Value.ToString(), b) Then
-                    e.Value = FormatBytes(b)
-                    e.FormattingApplied = True
-                End If
+        ' 1) dimensione file (se già lo usi, lascia pure il tuo blocco e aggiungi solo la parte Rotate)
+        If dgvFiles.Columns(e.ColumnIndex).DataPropertyName = "FileSizeBytes" AndAlso e.Value IsNot Nothing Then
+            Dim b As Long
+            If Long.TryParse(e.Value.ToString(), b) Then
+                e.Value = FormatBytes(b)
+                e.FormattingApplied = True
             End If
+        End If
+
+        ' 2) FORZA alternanza + selezione sulla ComboBox Ruota
+        If dgvFiles.Columns(e.ColumnIndex).Name = "colRotate" Then
+            Dim isAlt As Boolean = (e.RowIndex Mod 2 = 1)
+
+            e.CellStyle.BackColor = If(isAlt, Color.FromArgb(220, 220, 220), Color.White)
+            e.CellStyle.SelectionBackColor = SystemColors.Highlight
+            e.CellStyle.SelectionForeColor = SystemColors.HighlightText
         End If
     End Sub
 
