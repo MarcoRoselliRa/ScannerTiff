@@ -49,11 +49,11 @@ Public Class FrmSettings
         End Using
     End Sub
     Private Sub btnTestMagick_Click(sender As Object, e As EventArgs) Handles btnTestMagick.Click
-        TestExe(txtMagickExe.Text.Trim(), "-version", "ImageMagick")
+        TestExe(MagickExe.Text.Trim(), "-version", "ImageMagick")
     End Sub
 
     Private Sub btnTestGhost_Click(sender As Object, e As EventArgs) Handles btnTestGhost.Click
-        TestExe(txtGhostscriptExe.Text.Trim(), "-version", "Ghostscript")
+        TestExe(GhostscriptExe.Text.Trim(), "-version", "Ghostscript")
     End Sub
     Private Sub TestExe(exePath As String, args As String, friendlyName As String)
         Try
