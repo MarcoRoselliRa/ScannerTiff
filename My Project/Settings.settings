@@ -14,5 +14,14 @@
     <Setting Name="SubDir" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
+    <Setting Name="JpegQ" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">80</Value>
+    </Setting>
+    <Setting Name="MagickExe" Type="System.String" Scope="User">
+      <Value Profile="(Default)">magick</Value>
+    </Setting>
+    <Setting Name="GhostscriptExe" Type="System.String" Scope="User">
+      <Value Profile="(Default)">gswin64c</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

@@ -1,4 +1,5 @@
-﻿Public Class FrmSettings
+﻿Imports System.Diagnostics
+Public Class FrmSettings
     Public Property InDir As String
     Public Property WorkDir As String
     Public Property OutDir As String
@@ -46,5 +47,58 @@
         Using f As New FolderBrowserDialog()
             If f.ShowDialog() = DialogResult.OK Then txtOutDir.Text = f.SelectedPath
         End Using
+    End Sub
+    Private Sub btnTestMagick_Click(sender As Object, e As EventArgs) Handles btnTestMagick.Click
+        TestExe(txtMagickExe.Text.Trim(), "-version", "ImageMagick")
+    End Sub
+
+    Private Sub btnTestGhost_Click(sender As Object, e As EventArgs) Handles btnTestGhost.Click
+        TestExe(txtGhostscriptExe.Text.Trim(), "-version", "Ghostscript")
+    End Sub
+    Private Sub TestExe(exePath As String, args As String, friendlyName As String)
+        Try
+            If String.IsNullOrWhiteSpace(exePath) Then
+                MessageBox.Show("Percorso non valido.")
+                Return
+            End If
+
+            Dim psi As New ProcessStartInfo With {
+                .FileName = exePath,
+                .Arguments = args,
+                .UseShellExecute = False,
+                .RedirectStandardOutput = True,
+                .RedirectStandardError = True,
+                .CreateNoWindow = True
+            }
+
+            Using p As New Process()
+                p.StartInfo = psi
+                p.Start()
+
+                Dim output = p.StandardOutput.ReadToEnd()
+                Dim err = p.StandardError.ReadToEnd()
+
+                p.WaitForExit()
+
+                If p.ExitCode = 0 Then
+                    MessageBox.Show($"{friendlyName} OK ✅" & Environment.NewLine &
+                                    output.Split(Environment.NewLine)(0),
+                                    "Test riuscito",
+                                    MessageBoxButtons.OK,
+                                    MessageBoxIcon.Information)
+                Else
+                    MessageBox.Show($"{friendlyName} ERRORE ❌" & Environment.NewLine & err,
+                                    "Errore",
+                                    MessageBoxButtons.OK,
+                                    MessageBoxIcon.Error)
+                End If
+            End Using
+
+        Catch ex As Exception
+            MessageBox.Show($"{friendlyName} non trovato." & Environment.NewLine & ex.Message,
+                            "Errore",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error)
+        End Try
     End Sub
 End Class

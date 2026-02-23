@@ -34,6 +34,15 @@ Partial Class FrmSettings
         txtInDir = New TextBox()
         btnOk = New Button()
         btnClose = New Button()
+        MagickExe = New TextBox()
+        Label3 = New Label()
+        Label5 = New Label()
+        GhostscriptExe = New TextBox()
+        NumericUpDown = New NumericUpDown()
+        Label6 = New Label()
+        btnTestMagick = New Button()
+        btnTestGhost = New Button()
+        CType(NumericUpDown, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
         ' 
         ' btnBrowseOut
@@ -63,11 +72,11 @@ Partial Class FrmSettings
         ' 
         ' txtLog
         ' 
-        txtLog.Location = New Point(24, 272)
+        txtLog.Location = New Point(24, 469)
         txtLog.Multiline = True
         txtLog.Name = "txtLog"
         txtLog.ScrollBars = ScrollBars.Vertical
-        txtLog.Size = New Size(895, 381)
+        txtLog.Size = New Size(1056, 381)
         txtLog.TabIndex = 22
         ' 
         ' btnBrowseWork
@@ -122,7 +131,7 @@ Partial Class FrmSettings
         ' 
         ' btnOk
         ' 
-        btnOk.Location = New Point(975, 63)
+        btnOk.Location = New Point(954, 51)
         btnOk.Name = "btnOk"
         btnOk.Size = New Size(75, 45)
         btnOk.TabIndex = 26
@@ -131,18 +140,92 @@ Partial Class FrmSettings
         ' 
         ' btnClose
         ' 
-        btnClose.Location = New Point(969, 144)
+        btnClose.Location = New Point(969, 102)
         btnClose.Name = "btnClose"
         btnClose.Size = New Size(111, 41)
         btnClose.TabIndex = 27
         btnClose.Text = "Chiudi"
         btnClose.UseVisualStyleBackColor = True
         ' 
+        ' MagickExe
+        ' 
+        MagickExe.Location = New Point(24, 300)
+        MagickExe.Name = "MagickExe"
+        MagickExe.Size = New Size(520, 39)
+        MagickExe.TabIndex = 28
+        ' 
+        ' Label3
+        ' 
+        Label3.AutoSize = True
+        Label3.Location = New Point(24, 265)
+        Label3.Name = "Label3"
+        Label3.Size = New Size(189, 32)
+        Label3.TabIndex = 29
+        Label3.Text = "Convertitore Tiff"
+        ' 
+        ' Label5
+        ' 
+        Label5.AutoSize = True
+        Label5.Location = New Point(24, 342)
+        Label5.Name = "Label5"
+        Label5.Size = New Size(133, 32)
+        Label5.TabIndex = 31
+        Label5.Text = "Ghostscript"
+        ' 
+        ' GhostscriptExe
+        ' 
+        GhostscriptExe.Location = New Point(24, 377)
+        GhostscriptExe.Name = "GhostscriptExe"
+        GhostscriptExe.Size = New Size(520, 39)
+        GhostscriptExe.TabIndex = 30
+        ' 
+        ' NumericUpDown
+        ' 
+        NumericUpDown.Location = New Point(721, 378)
+        NumericUpDown.Name = "NumericUpDown"
+        NumericUpDown.Size = New Size(102, 39)
+        NumericUpDown.TabIndex = 32
+        ' 
+        ' Label6
+        ' 
+        Label6.AutoSize = True
+        Label6.Location = New Point(608, 342)
+        Label6.Name = "Label6"
+        Label6.Size = New Size(215, 32)
+        Label6.TabIndex = 33
+        Label6.Text = "Compressione PDF"
+        ' 
+        ' btnTestMagick
+        ' 
+        btnTestMagick.Location = New Point(560, 305)
+        btnTestMagick.Name = "btnTestMagick"
+        btnTestMagick.Size = New Size(75, 38)
+        btnTestMagick.TabIndex = 34
+        btnTestMagick.Text = "Test"
+        btnTestMagick.UseVisualStyleBackColor = True
+        ' 
+        ' btnTestGhost
+        ' 
+        btnTestGhost.Location = New Point(550, 379)
+        btnTestGhost.Name = "btnTestGhost"
+        btnTestGhost.Size = New Size(75, 38)
+        btnTestGhost.TabIndex = 35
+        btnTestGhost.Text = "Test"
+        btnTestGhost.UseVisualStyleBackColor = True
+        ' 
         ' FrmSettings
         ' 
         AutoScaleDimensions = New SizeF(13F, 32F)
         AutoScaleMode = AutoScaleMode.Font
-        ClientSize = New Size(1119, 665)
+        ClientSize = New Size(1119, 882)
+        Controls.Add(btnTestGhost)
+        Controls.Add(btnTestMagick)
+        Controls.Add(Label6)
+        Controls.Add(NumericUpDown)
+        Controls.Add(Label5)
+        Controls.Add(GhostscriptExe)
+        Controls.Add(Label3)
+        Controls.Add(MagickExe)
         Controls.Add(btnClose)
         Controls.Add(btnOk)
         Controls.Add(btnBrowseOut)
@@ -158,6 +241,7 @@ Partial Class FrmSettings
         FormBorderStyle = FormBorderStyle.FixedToolWindow
         Name = "FrmSettings"
         Text = "Settaggi"
+        CType(NumericUpDown, ComponentModel.ISupportInitialize).EndInit()
         ResumeLayout(False)
         PerformLayout()
     End Sub
@@ -174,4 +258,12 @@ Partial Class FrmSettings
     Friend WithEvents txtInDir As TextBox
     Friend WithEvents btnOk As Button
     Friend WithEvents btnClose As Button
+    Friend WithEvents MagickExe As TextBox
+    Friend WithEvents Label3 As Label
+    Friend WithEvents Label5 As Label
+    Friend WithEvents GhostscriptExe As TextBox
+    Friend WithEvents NumericUpDown As NumericUpDown
+    Friend WithEvents Label6 As Label
+    Friend WithEvents btnTestMagick As Button
+    Friend WithEvents btnTestGhost As Button
 End Class

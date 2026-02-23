@@ -31,6 +31,7 @@ Partial Class Form1
         picPreview = New PictureBox()
         btnDelete = New Button()
         btnSettings = New Button()
+        btnExport = New Button()
         CType(dgvFiles, ComponentModel.ISupportInitialize).BeginInit()
         CType(picPreview, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
@@ -109,11 +110,21 @@ Partial Class Form1
         btnSettings.Text = "Setting"
         btnSettings.UseVisualStyleBackColor = True
         ' 
+        ' btnExport
+        ' 
+        btnExport.Location = New Point(855, 118)
+        btnExport.Name = "btnExport"
+        btnExport.Size = New Size(159, 48)
+        btnExport.TabIndex = 18
+        btnExport.Text = "Esporta"
+        btnExport.UseVisualStyleBackColor = True
+        ' 
         ' Form1
         ' 
-        AutoScaleDimensions = New SizeF(13.0F, 32.0F)
+        AutoScaleDimensions = New SizeF(13F, 32F)
         AutoScaleMode = AutoScaleMode.Font
         ClientSize = New Size(1309, 1040)
+        Controls.Add(btnExport)
         Controls.Add(btnSettings)
         Controls.Add(btnDelete)
         Controls.Add(picPreview)
@@ -138,5 +149,6 @@ Partial Class Form1
     Friend WithEvents picPreview As PictureBox
     Friend WithEvents btnDelete As Button
     Friend WithEvents btnSettings As Button
+    Friend WithEvents btnExport As Button
 
 End Class

@@ -87,19 +87,19 @@ Public Class Form1
 
     Private Sub btnStart_Click(sender As Object, e As EventArgs) Handles btnStart.Click
         Try
-            ' salva settings
-            _worker.InDir = My.Settings.InDir
-            _worker.WorkDir = My.Settings.WorkDir
-            _worker.SubDir = txtSubDir.Text.Trim()
-            My.Settings.SubDir = txtSubDir.Text
-            My.Settings.Save()
-
             If _worker Is Nothing Then
                 _worker = New ScanMonitorWorker()
             Else
                 ' se per caso era rimasto attivo, lo fermiamo e ripartiamo puliti
                 Try : _worker.Stop() : Catch : End Try
             End If
+            ' ora esiste, quindi posso assegnare
+            _worker.InDir = My.Settings.InDir
+            _worker.WorkDir = My.Settings.WorkDir
+            _worker.SubDir = txtSubDir.Text.Trim()
+
+            My.Settings.SubDir = txtSubDir.Text.Trim()
+            My.Settings.Save()
 
             ' (ri)collega sempre gli eventi
             RemoveHandler _worker.LogLine, AddressOf Worker_LogLine
@@ -192,15 +192,25 @@ Public Class Form1
 
     Private Sub Worker_ItemAdded(item As ScanItem)
         If _ui Is Nothing Then Return
+
         _ui.Post(Sub(state)
                      Try
                          item.PageInfo = GetPageInfo(item.FullPath)
                          _list.Add(item)
+
+                         ' ✅ aggiorna anteprima subito
+                         ShowPreview(item.FullPath, item.Rotate)
+
+                         ' ✅ seleziona l’ultima riga
+                         If dgvFiles.Rows.Count > 0 Then
+                             dgvFiles.ClearSelection()
+                             dgvFiles.Rows(dgvFiles.Rows.Count - 1).Selected = True
+                             dgvFiles.FirstDisplayedScrollingRowIndex = dgvFiles.Rows.Count - 1
+                         End If
                      Catch
                      End Try
                  End Sub, Nothing)
     End Sub
-
 
 
     Private Sub Form1_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
@@ -521,5 +531,40 @@ Public Class Form1
         f.ShowDialog(Me)
     End Sub
 
+    Private Async Sub btnExport_Click(sender As Object, e As EventArgs) Handles btnExport.Click
+        Try
+            If String.IsNullOrWhiteSpace(My.Settings.OutDir) Then
+                MessageBox.Show("Imposta OUT nelle Impostazioni (⚙).")
+                Return
+            End If
 
+            Dim folderName = InputBox("Nome cartella export (dentro OUT):", "Esporta", "Export_" & DateTime.Now.ToString("yyyyMMdd_HHmm"))
+            folderName = folderName.Trim()
+            If folderName = "" Then Return
+
+            btnExport.Enabled = False
+
+            Dim exporter As New PdfExportService With {
+            .OutRoot = My.Settings.OutDir,
+            .ExportFolderName = folderName,
+            .JpegQ = My.Settings.JpegQ,
+            .MagickExe = My.Settings.MagickExe,
+            .GhostscriptExe = My.Settings.GhostscriptExe,
+            .MaxPdfHeightMm = 5000,
+            .CopyTiffOnFailure = True
+        }
+            AddHandler exporter.LogLine, AddressOf Worker_LogLine
+
+            ' snapshot della lista
+            Dim items = _list.ToList()
+
+            Await exporter.ExportAllAsync(items)
+
+            MessageBox.Show("Export completato in: " & Path.Combine(My.Settings.OutDir, folderName))
+        Catch ex As Exception
+            MessageBox.Show(ex.Message, "Errore export")
+        Finally
+            btnExport.Enabled = True
+        End Try
+    End Sub
 End Class

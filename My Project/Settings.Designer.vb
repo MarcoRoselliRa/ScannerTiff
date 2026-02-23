@@ -101,6 +101,42 @@ Namespace My
                 Me("SubDir") = value
             End Set
         End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("80")>  _
+        Public Property JpegQ() As Integer
+            Get
+                Return CType(Me("JpegQ"),Integer)
+            End Get
+            Set
+                Me("JpegQ") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("magick")>  _
+        Public Property MagickExe() As String
+            Get
+                Return CType(Me("MagickExe"),String)
+            End Get
+            Set
+                Me("MagickExe") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("gswin64c")>  _
+        Public Property GhostscriptExe() As String
+            Get
+                Return CType(Me("GhostscriptExe"),String)
+            End Get
+            Set
+                Me("GhostscriptExe") = value
+            End Set
+        End Property
     End Class
 End Namespace
 
