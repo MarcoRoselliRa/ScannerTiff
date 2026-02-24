@@ -532,17 +532,23 @@ Public Class Form1
     End Sub
 
     Private Async Sub btnExport_Click(sender As Object, e As EventArgs) Handles btnExport.Click
+        Dim oldTitle As String = Me.Text
+
         Try
             If String.IsNullOrWhiteSpace(My.Settings.OutDir) Then
                 MessageBox.Show("Imposta OUT nelle Impostazioni (⚙).")
                 Return
             End If
 
-            Dim folderName = InputBox("Nome cartella export (dentro OUT):", "Esporta", "Export_" & DateTime.Now.ToString("yyyyMMdd_HHmm"))
-            folderName = folderName.Trim()
+            Dim folderName = InputBox("Nome cartella export (dentro OUT):", "Esporta",
+                                  "Export_" & DateTime.Now.ToString("yyyyMMdd_HHmm")).Trim()
             If folderName = "" Then Return
 
+            ' UI: mostra che sta lavorando
+            Me.UseWaitCursor = True
             btnExport.Enabled = False
+            btnStart.Enabled = False
+            btnStop.Enabled = False
 
             Dim exporter As New PdfExportService With {
             .OutRoot = My.Settings.OutDir,
@@ -553,9 +559,18 @@ Public Class Form1
             .MaxPdfHeightMm = 5000,
             .CopyTiffOnFailure = True
         }
+
             AddHandler exporter.LogLine, AddressOf Worker_LogLine
 
-            ' snapshot della lista
+            AddHandler exporter.Progress,
+            Sub(cur, tot, relp)
+                If _ui Is Nothing Then Return
+                _ui.Post(Sub()
+                             Me.Text = $"ScannerTiff - Export {cur}/{tot} - {relp}"
+                         End Sub, Nothing)
+            End Sub
+
+            ' snapshot lista
             Dim items = _list.ToList()
 
             Await exporter.ExportAllAsync(items)
@@ -564,7 +579,13 @@ Public Class Form1
         Catch ex As Exception
             MessageBox.Show(ex.Message, "Errore export")
         Finally
+            ' UI: ripristina
+            Me.UseWaitCursor = False
+            Me.Text = oldTitle
+
             btnExport.Enabled = True
+            btnStart.Enabled = Not _isMonitoring
+            btnStop.Enabled = _isMonitoring
         End Try
     End Sub
 End Class

@@ -11,6 +11,12 @@ Public Class FrmSettings
         txtWorkDir.Text = WorkDir
         txtOutDir.Text = OutDir
         txtLog.Text = LogText
+        MagickExe.Text = My.Settings.MagickExe
+        GhostscriptExe.Text = My.Settings.GhostscriptExe
+
+        NumericUpDown.Minimum = 30
+        NumericUpDown.Maximum = 95
+        NumericUpDown.Value = My.Settings.JpegQ
     End Sub
     Private Sub btnOk_Click(sender As Object, e As EventArgs) Handles btnOk.Click
         InDir = txtInDir.Text
@@ -18,6 +24,9 @@ Public Class FrmSettings
         OutDir = txtOutDir.Text
         LogText = txtLog.Text
 
+        My.Settings.MagickExe = MagickExe.Text.Trim()
+        My.Settings.GhostscriptExe = GhostscriptExe.Text.Trim()
+        My.Settings.JpegQ = CInt(NumericUpDown.Value)
         My.Settings.InDir = txtInDir.Text
         My.Settings.WorkDir = txtWorkDir.Text
         My.Settings.OutDir = txtOutDir.Text

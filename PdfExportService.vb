@@ -12,6 +12,7 @@ Public Class PdfExportService
     Public Property JpegQ As Integer = 80
     Public Property MagickExe As String = "magick"
     Public Property GhostscriptExe As String = "gswin64c"
+    Public Event Progress(current As Integer, total As Integer, relPath As String)
 
     Public Async Function ExportAllAsync(items As IEnumerable(Of ScanItem)) As Task
         If String.IsNullOrWhiteSpace(OutRoot) Then Throw New ArgumentException("OutRoot vuota")
@@ -19,6 +20,15 @@ Public Class PdfExportService
 
         Dim baseOut = Path.Combine(OutRoot, ExportFolderName.Trim())
         Directory.CreateDirectory(baseOut)
+        Dim list = items.ToList()
+        Dim total = list.Count
+        Dim i As Integer = 0
+
+        For Each it In list
+            i += 1
+            RaiseEvent Progress(i, total, it.RelPath)
+            Await Task.Run(Sub() ExportOne(it, baseOut))
+        Next
 
         For Each it In items
             If it Is Nothing Then Continue For
@@ -45,9 +55,10 @@ Public Class PdfExportService
 
             ' Se la pagina è troppo lunga, non fare PDF: copia TIFF
             Dim hMm As Double = GetHeightMm(it.FullPath)
+            RaiseEvent LogLine($"DEBUG HeightMm={Math.Round(hMm)}  Max={MaxPdfHeightMm}  File={rel}")
             If hMm > 0 AndAlso hMm > MaxPdfHeightMm Then
                 RaiseEvent LogLine($"SKIP PDF (troppo lungo: {Math.Round(hMm)}mm) -> copio TIFF: {rel}")
-                If CopyTiffOnFailure Then CopyTiffFallback(it.FullPath, rel, baseOut)
+                If CopyTiffOnFailure Then CopyTiffFallback(it.FullPath, rel, outFolder)
                 Return
             End If
             RaiseEvent LogLine("EXPORT: " & rel)
@@ -59,12 +70,12 @@ Public Class PdfExportService
             Dim deg = it.Rotate
             If deg <> 0 Then rotateArg = $" -rotate {deg} "
 
-            Dim args1 = $"""{it.FullPath}""{rotateArg}-define pdf:fit-page=true ""{tmpPdf}"""
+            Dim args1 = $"""{it.FullPath}""{rotateArg} -define pdf:fit-page=true ""{tmpPdf}"""
             Dim r1 = RunProcess(MagickExe, args1)
 
             If r1.ExitCode <> 0 OrElse Not File.Exists(tmpPdf) Then
                 RaiseEvent LogLine("ERR Magick: " & TrimOutput(r1.AllOutput))
-                If CopyTiffOnFailure Then CopyTiffFallback(it.FullPath, rel, baseOut)
+                If CopyTiffOnFailure Then CopyTiffFallback(it.FullPath, rel, outFolder)
                 SafeDelete(tmpPdf)
                 Return
             End If
@@ -86,7 +97,19 @@ Public Class PdfExportService
 
             If r2.ExitCode <> 0 OrElse Not File.Exists(outPdf) Then
                 RaiseEvent LogLine("ERR Ghostscript: " & TrimOutput(r2.AllOutput))
-                If CopyTiffOnFailure Then CopyTiffFallback(it.FullPath, rel, baseOut)
+
+                ' ✅ fallback migliore: salva il PDF “grezzo” creato da Magick
+                Try
+                    File.Copy(tmpPdf, outPdf, True)
+                    RaiseEvent LogLine("FALLBACK -> salvato PDF NON compresso: " & outPdf)
+                    SafeDelete(tmpPdf)
+                    Return
+                Catch ex As Exception
+                    RaiseEvent LogLine("ERR fallback PDF grezzo: " & ex.Message)
+                End Try
+
+                ' se anche questo fallisce, allora TIFF
+                If CopyTiffOnFailure Then CopyTiffFallback(it.FullPath, rel, outFolder)
                 Return
             End If
 
@@ -156,17 +179,16 @@ Public Class PdfExportService
         Return 0
     End Function
 
-    Private Sub CopyTiffFallback(fullPath As String, rel As String, baseOut As String)
+    Private Sub CopyTiffFallback(fullPath As String, rel As String, outFolder As String)
         Try
-            Dim fallRoot = Path.Combine(baseOut, "_TIFF_FALLBACK")
-            Dim relDir = Path.GetDirectoryName(rel)
-            Dim destDir = If(String.IsNullOrEmpty(relDir), fallRoot, Path.Combine(fallRoot, relDir))
-            Directory.CreateDirectory(destDir)
+            Directory.CreateDirectory(outFolder)
 
-            Dim dest = Path.Combine(destDir, Path.GetFileName(fullPath))
+            Dim dest = Path.Combine(outFolder, Path.GetFileName(fullPath))
+
+            ' sovrascrive se esiste
             File.Copy(fullPath, dest, True)
 
-            RaiseEvent LogLine("TIFF salvato -> " & dest)
+            RaiseEvent LogLine("TIFF fallback salvato -> " & dest)
         Catch ex As Exception
             RaiseEvent LogLine("ERR copia TIFF fallback: " & ex.Message)
         End Try
