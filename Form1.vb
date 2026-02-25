@@ -19,7 +19,8 @@ Public Class Form1
     Color.FromArgb(255, 235, 235)  ' rosino
 }
     Private _nextColorIndex As Integer = 0
-    Private _exportRowIndex As Integer = -1
+    Private _isExporting As Boolean = False
+    Private _loadingSettings As Boolean = False
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         _ui = SynchronizationContext.Current
         _items.DataSource = _list
@@ -37,7 +38,7 @@ Public Class Form1
             .Name = "colRelPath",
             .DataPropertyName = "RelPath",
             .HeaderText = "File",
-            .Width = 220,
+            .Width = 178,
             .ReadOnly = True
         }
         dgvFiles.Columns.Add(c1)
@@ -46,7 +47,7 @@ Public Class Form1
             .Name = "colSize",
             .DataPropertyName = "FileSizeBytes",
             .HeaderText = "FileSize",
-            .Width = 115,
+            .Width = 100,
             .ReadOnly = True
         }
         c2.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
@@ -56,7 +57,7 @@ Public Class Form1
             .Name = "colPage",
             .DataPropertyName = "PageInfo",
             .HeaderText = "Pagina",
-            .Width = 200,
+            .Width = 135,
             .ReadOnly = True
         }
         dgvFiles.Columns.Add(c3)
@@ -83,8 +84,38 @@ Public Class Form1
         dgvFiles.SelectionMode = DataGridViewSelectionMode.FullRowSelect
         dgvFiles.MultiSelect = False
         dgvFiles.RowsDefaultCellStyle.BackColor = Color.White
-    End Sub
 
+        cmbRotateAll.Items.Clear()
+        cmbRotateAll.Items.AddRange(New Object() {0, 90, 180, 270})
+        _loadingSettings = True
+        Try
+            Dim v As Integer = My.Settings.DefaultRotate
+
+            ' fallback se per qualche motivo non è valido
+            If v <> 0 AndAlso v <> 90 AndAlso v <> 180 AndAlso v <> 270 Then v = 0
+
+            cmbRotateAll.SelectedItem = v
+        Finally
+            _loadingSettings = False
+        End Try
+    End Sub
+    Private Sub cmbRotateAll_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cmbRotateAll.SelectedIndexChanged
+        If _loadingSettings Then Return
+        Dim def = GetDefaultRotate()
+        My.Settings.DefaultRotate = def
+        My.Settings.Save()
+
+        For Each it In _list
+            it.Rotate = def
+        Next
+
+        ' refresh griglia
+        dgvFiles.Refresh()
+
+        ' aggiorna anteprima riga selezionata
+        Dim sel = GetSelectedItem()
+        If sel IsNot Nothing Then ShowPreview(sel.FullPath, sel.Rotate)
+    End Sub
 
     Private Sub btnStart_Click(sender As Object, e As EventArgs) Handles btnStart.Click
         Try
@@ -151,7 +182,7 @@ Public Class Form1
                 .FullPath = f,
                 .FileSizeBytes = fi.Length,
                 .PageInfo = GetPageInfo(f),
-                .Rotate = 0,
+                .Rotate = GetDefaultRotate(),
                 .CreatedAt = fi.CreationTime
             })
             Next
@@ -196,6 +227,7 @@ Public Class Form1
 
         _ui.Post(Sub(state)
                      Try
+                         item.Rotate = GetDefaultRotate()
                          item.PageInfo = GetPageInfo(item.FullPath)
                          _list.Add(item)
 
@@ -495,11 +527,6 @@ Public Class Form1
 
     Private Sub dgvFiles_RowPrePaint(sender As Object, e As DataGridViewRowPrePaintEventArgs) Handles dgvFiles.RowPrePaint
         If e.RowIndex < 0 Then Return
-        If e.RowIndex = _exportRowIndex Then
-            dgvFiles.Rows(e.RowIndex).DefaultCellStyle.BackColor = Color.LightGoldenrodYellow
-            Return
-        End If
-        If e.RowIndex < 0 Then Return
 
         Dim row = dgvFiles.Rows(e.RowIndex)
         Dim item = TryCast(row.DataBoundItem, ScanItem)
@@ -539,6 +566,14 @@ Public Class Form1
 
     Private Async Sub btnExport_Click(sender As Object, e As EventArgs) Handles btnExport.Click
         Dim oldTitle As String = Me.Text
+        If String.IsNullOrWhiteSpace(My.Settings.ArchiveDir) Then
+            MessageBox.Show("Imposta ARCHIVIO nelle Impostazioni (⚙).")
+            Return
+        End If
+        If Not Directory.Exists(My.Settings.ArchiveDir) Then
+            MessageBox.Show("La cartella ARCHIVIO non esiste:" & Environment.NewLine & My.Settings.ArchiveDir)
+            Return
+        End If
 
         Try
             If String.IsNullOrWhiteSpace(My.Settings.OutDir) Then
@@ -579,8 +614,23 @@ Public Class Form1
 
             ' snapshot lista
             Dim items = _list.ToList()
-
             Await exporter.ExportAllAsync(items)
+
+            ' 1) copia originali in Archivio
+            ArchiveOriginalTiffs(items, My.Settings.ArchiveDir, folderName)
+
+            ' 2) ferma il monitor (programma in STOP)
+            StopMonitoring()
+
+            ' 3) cancella da WORK
+            DeleteWorkFiles(items)
+
+            ' 4) svuota lista e anteprima (opzionale ma consigliato)
+            _list.Clear()
+            If picPreview.Image IsNot Nothing Then
+                picPreview.Image.Dispose()
+                picPreview.Image = Nothing
+            End If
 
             MessageBox.Show("Export completato in: " & Path.Combine(My.Settings.OutDir, folderName))
         Catch ex As Exception
@@ -602,12 +652,10 @@ Public Class Form1
         btnSettings.Enabled = Not isBusy
         txtSubDir.Enabled = Not isBusy
 
-        dgvFiles.Enabled = Not isBusy  ' opzionale: se vuoi evitare click mentre esporta
+        'dgvFiles.Enabled = Not isBusy  ' opzionale: se vuoi evitare click mentre esporta
     End Sub
     Private Sub SelectRowInDgv(index As Integer)
         If index < 0 OrElse index >= dgvFiles.Rows.Count Then Return
-
-        _exportRowIndex = index ' <<< questa è la riga “in lavorazione”
 
         dgvFiles.ClearSelection()
         dgvFiles.Rows(index).Selected = True
@@ -618,6 +666,46 @@ Public Class Form1
 
         dgvFiles.FirstDisplayedScrollingRowIndex = Math.Max(0, index)
 
-        dgvFiles.InvalidateRow(index) ' <<< forza repaint riga (così vedi subito il colore)
+    End Sub
+    Private Function GetDefaultRotate() As Integer
+        Dim v As Integer = 0
+        If cmbRotateAll IsNot Nothing AndAlso cmbRotateAll.SelectedItem IsNot Nothing Then
+            Integer.TryParse(cmbRotateAll.SelectedItem.ToString(), v)
+        End If
+        Return v
+    End Function
+    Private Sub ArchiveOriginalTiffs(items As List(Of ScanItem), archiveRoot As String, folderName As String)
+        Dim baseArchive = Path.Combine(archiveRoot, folderName.Trim())
+        Directory.CreateDirectory(baseArchive)
+
+        For Each it In items
+            ' it.RelPath = sottocartelle + nome file
+            Dim rel = If(it.RelPath, Path.GetFileName(it.FullPath))
+            Dim dest = Path.Combine(baseArchive, rel)
+
+            Dim destDir = Path.GetDirectoryName(dest)
+            If Not String.IsNullOrEmpty(destDir) Then Directory.CreateDirectory(destDir)
+
+            ' Copia (sovrascrive)
+            File.Copy(it.FullPath, dest, True)
+        Next
+    End Sub
+    Private Sub StopMonitoring()
+        Try
+            If _worker IsNot Nothing Then _worker.Stop()
+        Catch
+        End Try
+        _isMonitoring = False
+        btnStart.Enabled = True
+        btnStop.Enabled = False
+    End Sub
+
+    Private Sub DeleteWorkFiles(items As List(Of ScanItem))
+        For Each it In items
+            Try
+                If File.Exists(it.FullPath) Then File.Delete(it.FullPath)
+            Catch
+            End Try
+        Next
     End Sub
 End Class

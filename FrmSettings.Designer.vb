@@ -42,6 +42,9 @@ Partial Class FrmSettings
         Label6 = New Label()
         btnTestMagick = New Button()
         btnTestGhost = New Button()
+        txtArchiveDir = New TextBox()
+        Label7 = New Label()
+        Button1 = New Button()
         CType(NumericUpDown, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
         ' 
@@ -72,7 +75,7 @@ Partial Class FrmSettings
         ' 
         ' txtLog
         ' 
-        txtLog.Location = New Point(24, 469)
+        txtLog.Location = New Point(24, 533)
         txtLog.Multiline = True
         txtLog.Name = "txtLog"
         txtLog.ScrollBars = ScrollBars.Vertical
@@ -149,7 +152,7 @@ Partial Class FrmSettings
         ' 
         ' MagickExe
         ' 
-        MagickExe.Location = New Point(24, 300)
+        MagickExe.Location = New Point(24, 364)
         MagickExe.Name = "MagickExe"
         MagickExe.Size = New Size(520, 39)
         MagickExe.TabIndex = 28
@@ -157,7 +160,7 @@ Partial Class FrmSettings
         ' Label3
         ' 
         Label3.AutoSize = True
-        Label3.Location = New Point(24, 265)
+        Label3.Location = New Point(24, 329)
         Label3.Name = "Label3"
         Label3.Size = New Size(189, 32)
         Label3.TabIndex = 29
@@ -166,7 +169,7 @@ Partial Class FrmSettings
         ' Label5
         ' 
         Label5.AutoSize = True
-        Label5.Location = New Point(24, 342)
+        Label5.Location = New Point(24, 406)
         Label5.Name = "Label5"
         Label5.Size = New Size(133, 32)
         Label5.TabIndex = 31
@@ -174,14 +177,14 @@ Partial Class FrmSettings
         ' 
         ' GhostscriptExe
         ' 
-        GhostscriptExe.Location = New Point(24, 377)
+        GhostscriptExe.Location = New Point(24, 441)
         GhostscriptExe.Name = "GhostscriptExe"
         GhostscriptExe.Size = New Size(520, 39)
         GhostscriptExe.TabIndex = 30
         ' 
         ' NumericUpDown
         ' 
-        NumericUpDown.Location = New Point(721, 378)
+        NumericUpDown.Location = New Point(721, 442)
         NumericUpDown.Name = "NumericUpDown"
         NumericUpDown.Size = New Size(102, 39)
         NumericUpDown.TabIndex = 32
@@ -189,7 +192,7 @@ Partial Class FrmSettings
         ' Label6
         ' 
         Label6.AutoSize = True
-        Label6.Location = New Point(608, 342)
+        Label6.Location = New Point(608, 406)
         Label6.Name = "Label6"
         Label6.Size = New Size(215, 32)
         Label6.TabIndex = 33
@@ -197,7 +200,7 @@ Partial Class FrmSettings
         ' 
         ' btnTestMagick
         ' 
-        btnTestMagick.Location = New Point(560, 305)
+        btnTestMagick.Location = New Point(560, 369)
         btnTestMagick.Name = "btnTestMagick"
         btnTestMagick.Size = New Size(75, 38)
         btnTestMagick.TabIndex = 34
@@ -206,18 +209,46 @@ Partial Class FrmSettings
         ' 
         ' btnTestGhost
         ' 
-        btnTestGhost.Location = New Point(550, 379)
+        btnTestGhost.Location = New Point(550, 443)
         btnTestGhost.Name = "btnTestGhost"
         btnTestGhost.Size = New Size(75, 38)
         btnTestGhost.TabIndex = 35
         btnTestGhost.Text = "Test"
         btnTestGhost.UseVisualStyleBackColor = True
         ' 
+        ' txtArchiveDir
+        ' 
+        txtArchiveDir.Location = New Point(24, 284)
+        txtArchiveDir.Name = "txtArchiveDir"
+        txtArchiveDir.Size = New Size(719, 39)
+        txtArchiveDir.TabIndex = 37
+        ' 
+        ' Label7
+        ' 
+        Label7.AutoSize = True
+        Label7.Location = New Point(24, 249)
+        Label7.Name = "Label7"
+        Label7.Size = New Size(207, 32)
+        Label7.TabIndex = 36
+        Label7.Text = "Cartella ARCHIVIO"
+        ' 
+        ' Button1
+        ' 
+        Button1.Location = New Point(782, 280)
+        Button1.Name = "Button1"
+        Button1.Size = New Size(137, 47)
+        Button1.TabIndex = 38
+        Button1.Text = "Button1"
+        Button1.UseVisualStyleBackColor = True
+        ' 
         ' FrmSettings
         ' 
         AutoScaleDimensions = New SizeF(13F, 32F)
         AutoScaleMode = AutoScaleMode.Font
-        ClientSize = New Size(1119, 882)
+        ClientSize = New Size(1119, 971)
+        Controls.Add(Button1)
+        Controls.Add(txtArchiveDir)
+        Controls.Add(Label7)
         Controls.Add(btnTestGhost)
         Controls.Add(btnTestMagick)
         Controls.Add(Label6)
@@ -266,4 +297,7 @@ Partial Class FrmSettings
     Friend WithEvents Label6 As Label
     Friend WithEvents btnTestMagick As Button
     Friend WithEvents btnTestGhost As Button
+    Friend WithEvents txtArchiveDir As TextBox
+    Friend WithEvents Label7 As Label
+    Friend WithEvents Button1 As Button
 End Class

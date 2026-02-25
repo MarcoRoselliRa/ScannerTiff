@@ -24,6 +24,7 @@ Public Class FrmSettings
         OutDir = txtOutDir.Text
         LogText = txtLog.Text
 
+        My.Settings.ArchiveDir = txtArchiveDir.Text.Trim()
         My.Settings.MagickExe = MagickExe.Text.Trim()
         My.Settings.GhostscriptExe = GhostscriptExe.Text.Trim()
         My.Settings.JpegQ = CInt(NumericUpDown.Value)
@@ -53,8 +54,8 @@ Public Class FrmSettings
     End Sub
 
     Private Sub btnBrowseOut_Click(sender As Object, e As EventArgs) Handles btnBrowseOut.Click
-        Using f As New FolderBrowserDialog()
-            If f.ShowDialog() = DialogResult.OK Then txtOutDir.Text = f.SelectedPath
+        Using f As New FolderBrowserDialog
+            If f.ShowDialog = DialogResult.OK Then txtOutDir.Text = f.SelectedPath
         End Using
     End Sub
     Private Sub btnTestMagick_Click(sender As Object, e As EventArgs) Handles btnTestMagick.Click

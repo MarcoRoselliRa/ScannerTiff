@@ -137,6 +137,30 @@ Namespace My
                 Me("GhostscriptExe") = value
             End Set
         End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("0")>  _
+        Public Property DefaultRotate() As Integer
+            Get
+                Return CType(Me("DefaultRotate"),Integer)
+            End Get
+            Set
+                Me("DefaultRotate") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("")>  _
+        Public Property ArchiveDir() As String
+            Get
+                Return CType(Me("ArchiveDir"),String)
+            End Get
+            Set
+                Me("ArchiveDir") = value
+            End Set
+        End Property
     End Class
 End Namespace
 

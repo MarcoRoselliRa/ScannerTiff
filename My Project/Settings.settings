@@ -23,5 +23,11 @@
     <Setting Name="GhostscriptExe" Type="System.String" Scope="User">
       <Value Profile="(Default)">gswin64c</Value>
     </Setting>
+    <Setting Name="DefaultRotate" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">0</Value>
+    </Setting>
+    <Setting Name="ArchiveDir" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
   </Settings>
 </SettingsFile>

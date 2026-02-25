@@ -30,16 +30,7 @@ Public Class PdfExportService
             Await Task.Run(Sub() ExportOne(it, baseOut))
         Next
 
-        For Each it In items
-            If it Is Nothing Then Continue For
-            If String.IsNullOrWhiteSpace(it.FullPath) Then Continue For
-            If Not File.Exists(it.FullPath) Then
-                RaiseEvent LogLine("SKIP missing: " & it.FullPath)
-                Continue For
-            End If
 
-            Await Task.Run(Sub() ExportOne(it, baseOut))
-        Next
     End Function
 
     Private Sub ExportOne(it As ScanItem, baseOut As String)
