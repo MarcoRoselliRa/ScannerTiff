@@ -80,14 +80,14 @@ Partial Class Form1
         dgvFiles.RowHeadersWidth = 82
         dgvFiles.ScrollBars = ScrollBars.Vertical
         dgvFiles.SelectionMode = DataGridViewSelectionMode.FullRowSelect
-        dgvFiles.Size = New Size(747, 494)
+        dgvFiles.Size = New Size(747, 1050)
         dgvFiles.TabIndex = 10
         ' 
         ' picPreview
         ' 
         picPreview.Location = New Point(846, 266)
         picPreview.Name = "picPreview"
-        picPreview.Size = New Size(430, 489)
+        picPreview.Size = New Size(706, 1050)
         picPreview.SizeMode = PictureBoxSizeMode.Zoom
         picPreview.TabIndex = 11
         picPreview.TabStop = False
@@ -123,7 +123,7 @@ Partial Class Form1
         ' 
         AutoScaleDimensions = New SizeF(13F, 32F)
         AutoScaleMode = AutoScaleMode.Font
-        ClientSize = New Size(1309, 1040)
+        ClientSize = New Size(1596, 1341)
         Controls.Add(btnExport)
         Controls.Add(btnSettings)
         Controls.Add(btnDelete)

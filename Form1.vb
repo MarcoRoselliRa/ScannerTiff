@@ -19,6 +19,7 @@ Public Class Form1
     Color.FromArgb(255, 235, 235)  ' rosino
 }
     Private _nextColorIndex As Integer = 0
+    Private _exportRowIndex As Integer = -1
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         _ui = SynchronizationContext.Current
         _items.DataSource = _list
@@ -494,6 +495,11 @@ Public Class Form1
 
     Private Sub dgvFiles_RowPrePaint(sender As Object, e As DataGridViewRowPrePaintEventArgs) Handles dgvFiles.RowPrePaint
         If e.RowIndex < 0 Then Return
+        If e.RowIndex = _exportRowIndex Then
+            dgvFiles.Rows(e.RowIndex).DefaultCellStyle.BackColor = Color.LightGoldenrodYellow
+            Return
+        End If
+        If e.RowIndex < 0 Then Return
 
         Dim row = dgvFiles.Rows(e.RowIndex)
         Dim item = TryCast(row.DataBoundItem, ScanItem)
@@ -545,10 +551,7 @@ Public Class Form1
             If folderName = "" Then Return
 
             ' UI: mostra che sta lavorando
-            Me.UseWaitCursor = True
-            btnExport.Enabled = False
-            btnStart.Enabled = False
-            btnStop.Enabled = False
+            SetUiBusyForExport(True)
 
             Dim exporter As New PdfExportService With {
             .OutRoot = My.Settings.OutDir,
@@ -563,12 +566,16 @@ Public Class Form1
             AddHandler exporter.LogLine, AddressOf Worker_LogLine
 
             AddHandler exporter.Progress,
-            Sub(cur, tot, relp)
-                If _ui Is Nothing Then Return
-                _ui.Post(Sub()
-                             Me.Text = $"ScannerTiff - Export {cur}/{tot} - {relp}"
-                         End Sub, Nothing)
-            End Sub
+                    Sub(cur As Integer, tot As Integer, relp As String)
+                        If _ui Is Nothing Then Return
+
+                        Dim rowIndex As Integer = cur - 1 ' cur è 1-based
+
+                        _ui.Post(Sub()
+                                     Me.Text = $"ScannerTiff - Export {cur}/{tot} - {relp}"
+                                     SelectRowInDgv(rowIndex)
+                                 End Sub, Nothing)
+                    End Sub
 
             ' snapshot lista
             Dim items = _list.ToList()
@@ -580,12 +587,37 @@ Public Class Form1
             MessageBox.Show(ex.Message, "Errore export")
         Finally
             ' UI: ripristina
-            Me.UseWaitCursor = False
+            SetUiBusyForExport(False)
             Me.Text = oldTitle
-
-            btnExport.Enabled = True
-            btnStart.Enabled = Not _isMonitoring
-            btnStop.Enabled = _isMonitoring
         End Try
+    End Sub
+    Private Sub SetUiBusyForExport(isBusy As Boolean)
+        Me.UseWaitCursor = isBusy
+
+        btnExport.Enabled = Not isBusy
+        btnStart.Enabled = Not isBusy AndAlso Not _isMonitoring
+        btnStop.Enabled = Not isBusy AndAlso _isMonitoring
+
+        btnDelete.Enabled = Not isBusy
+        btnSettings.Enabled = Not isBusy
+        txtSubDir.Enabled = Not isBusy
+
+        dgvFiles.Enabled = Not isBusy  ' opzionale: se vuoi evitare click mentre esporta
+    End Sub
+    Private Sub SelectRowInDgv(index As Integer)
+        If index < 0 OrElse index >= dgvFiles.Rows.Count Then Return
+
+        _exportRowIndex = index ' <<< questa è la riga “in lavorazione”
+
+        dgvFiles.ClearSelection()
+        dgvFiles.Rows(index).Selected = True
+
+        If dgvFiles.Columns.Count > 0 Then
+            dgvFiles.CurrentCell = dgvFiles.Rows(index).Cells(0)
+        End If
+
+        dgvFiles.FirstDisplayedScrollingRowIndex = Math.Max(0, index)
+
+        dgvFiles.InvalidateRow(index) ' <<< forza repaint riga (così vedi subito il colore)
     End Sub
 End Class
