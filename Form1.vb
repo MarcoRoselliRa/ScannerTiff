@@ -21,6 +21,7 @@ Public Class Form1
     Private _nextColorIndex As Integer = 0
     Private _isExporting As Boolean = False
     Private _loadingSettings As Boolean = False
+    Private _previewEnabled As Boolean = False
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         _ui = SynchronizationContext.Current
         _items.DataSource = _list
@@ -98,6 +99,26 @@ Public Class Form1
         Finally
             _loadingSettings = False
         End Try
+
+        chkAnteprima.Checked = My.Settings.PreviewEnabled
+        _previewEnabled = chkAnteprima.Checked
+    End Sub
+    Private Sub chkAnteprima_CheckedChanged(sender As Object, e As EventArgs) Handles chkAnteprima.CheckedChanged
+        _previewEnabled = chkAnteprima.Checked
+
+        My.Settings.PreviewEnabled = _previewEnabled
+        My.Settings.Save()
+
+        If Not _previewEnabled Then
+            If picPreview.Image IsNot Nothing Then
+                picPreview.Image.Dispose()
+                picPreview.Image = Nothing
+            End If
+        Else
+            ' se riattivi, mostra subito la preview della riga selezionata (se c'è)
+            Dim it = GetSelectedItem()
+            If it IsNot Nothing Then ShowPreview(it.FullPath, it.Rotate)
+        End If
     End Sub
     Private Sub cmbRotateAll_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cmbRotateAll.SelectedIndexChanged
         If _loadingSettings Then Return
@@ -272,6 +293,8 @@ Public Class Form1
 
 
     Private Sub ShowPreview(path As String, Optional rotate As Integer = 0)
+        If Not _previewEnabled Then Return   ' <<< BLOCCO GLOBALE ANTEPRIMA
+
         Try
             If Not File.Exists(path) Then Return
 
@@ -566,6 +589,7 @@ Public Class Form1
 
     Private Async Sub btnExport_Click(sender As Object, e As EventArgs) Handles btnExport.Click
         Dim oldTitle As String = Me.Text
+
         If String.IsNullOrWhiteSpace(My.Settings.ArchiveDir) Then
             MessageBox.Show("Imposta ARCHIVIO nelle Impostazioni (⚙).")
             Return
@@ -601,19 +625,21 @@ Public Class Form1
             AddHandler exporter.LogLine, AddressOf Worker_LogLine
 
             AddHandler exporter.Progress,
-                    Sub(cur As Integer, tot As Integer, relp As String)
-                        If _ui Is Nothing Then Return
+            Sub(cur As Integer, tot As Integer, relp As String)
+                If _ui Is Nothing Then Return
 
-                        Dim rowIndex As Integer = cur - 1 ' cur è 1-based
+                Dim rowIndex As Integer = cur - 1 ' cur è 1-based
 
-                        _ui.Post(Sub()
-                                     Me.Text = $"ScannerTiff - Export {cur}/{tot} - {relp}"
-                                     SelectRowInDgv(rowIndex)
-                                 End Sub, Nothing)
-                    End Sub
+                _ui.Post(Sub()
+                             Me.Text = $"ScannerTiff - Export {cur}/{tot} - {relp}"
+                             SelectRowInDgv(rowIndex)
+                         End Sub, Nothing)
+            End Sub
 
             ' snapshot lista
             Dim items = _list.ToList()
+
+            ' 0) export PDF
             Await exporter.ExportAllAsync(items)
 
             ' 1) copia originali in Archivio
@@ -622,15 +648,17 @@ Public Class Form1
             ' 2) ferma il monitor (programma in STOP)
             StopMonitoring()
 
-            ' 3) cancella da WORK
-            DeleteWorkFiles(items)
-
-            ' 4) svuota lista e anteprima (opzionale ma consigliato)
-            _list.Clear()
+            ' 3) libera anteprima (evita lock GDI+ su file in WORK)
             If picPreview.Image IsNot Nothing Then
                 picPreview.Image.Dispose()
                 picPreview.Image = Nothing
             End If
+
+            ' 4) svuota COMPLETAMENTE WORK (file + cartelle)
+            ClearWorkFolder()
+
+            ' 5) pulisci lista UI
+            _list.Clear()
 
             MessageBox.Show("Export completato in: " & Path.Combine(My.Settings.OutDir, folderName))
         Catch ex As Exception
@@ -707,5 +735,49 @@ Public Class Form1
             Catch
             End Try
         Next
+    End Sub
+
+    Private Sub SafeDeleteFile(path As String, Optional tries As Integer = 6, Optional delayMs As Integer = 250)
+        For t = 1 To tries
+            Try
+                If File.Exists(path) Then
+                    File.SetAttributes(path, FileAttributes.Normal)
+                    File.Delete(path)
+                End If
+                Exit Sub
+            Catch
+                Threading.Thread.Sleep(delayMs)
+            End Try
+        Next
+    End Sub
+
+    Private Sub DeleteEmptyDirectories(root As String)
+        If Not Directory.Exists(root) Then Return
+
+        Dim dirs = Directory.EnumerateDirectories(root, "*", SearchOption.AllDirectories).ToList()
+        dirs.Sort(Function(a, b) b.Length.CompareTo(a.Length)) ' più profonde prima
+
+        For Each d In dirs
+            Try
+                If Directory.Exists(d) AndAlso Not Directory.EnumerateFileSystemEntries(d).Any() Then
+                    Directory.Delete(d, False)
+                End If
+            Catch
+            End Try
+        Next
+    End Sub
+
+    Private Sub ClearWorkFolder()
+        Dim root = My.Settings.WorkDir
+        If String.IsNullOrWhiteSpace(root) Then Return
+        If Not Directory.Exists(root) Then Return
+
+        ' 1) cancella tutti i file
+        For Each f In Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
+            SafeDeleteFile(f)
+        Next
+
+        ' 2) cancella tutte le cartelle rimaste vuote
+        DeleteEmptyDirectories(root)
     End Sub
 End Class
