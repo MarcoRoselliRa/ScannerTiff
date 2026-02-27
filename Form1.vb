@@ -24,7 +24,30 @@ Public Class Form1
     Private _previewEnabled As Boolean = False
     Private _currentJobPath As String = ""
     Private _rotationMap As New Dictionary(Of String, Integer)(StringComparer.OrdinalIgnoreCase)
+    ' lavori bloccati durante export: chiave "Sede\Lavoro"
+    Private _lockedJobs As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+    Private Class ExportTask
+        Public Property Sede As String
+        Public Property Lavoro As String
+        Public Property JobPath As String
+        Public Property OutRoot As String
+        Public Property ExportFolder As String
+    End Class
 
+    Private _exportQueue As New Queue(Of ExportTask)()
+    Private _isExportRunning As Boolean = False
+
+    Private Function JobKey(sede As String, lavoro As String) As String
+        Return sede.Trim() & "\" & lavoro.Trim()
+    End Function
+
+    Private Function IsCurrentJobLocked() As Boolean
+        If cmbSede.SelectedItem Is Nothing Then Return False
+        Dim sede = cmbSede.SelectedItem.ToString()
+        Dim lavoro = cmbLavoro.Text.Trim()
+        If String.IsNullOrWhiteSpace(lavoro) Then Return False
+        Return _lockedJobs.Contains(JobKey(sede, lavoro))
+    End Function
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         _ui = SynchronizationContext.Current
         _items.DataSource = _list
@@ -106,6 +129,8 @@ Public Class Form1
         chkAnteprima.Checked = My.Settings.PreviewEnabled
         _previewEnabled = chkAnteprima.Checked
         LoadJobsCombo()
+        cmbLavoro.SelectedIndex = -1
+        UpdateUiState()
     End Sub
     'Percorso medadata
     Private Function GetMetadataPath(jobPath As String) As String
@@ -180,18 +205,51 @@ Public Class Form1
     End Sub
     'evento combobox lavori
     Private Sub cmbLavoro_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cmbLavoro.SelectedIndexChanged
-        If cmbLavoro.SelectedIndex < 0 Then Return
 
-        Dim jobName As String = cmbLavoro.SelectedItem.ToString()
-        _currentJobPath = Path.Combine(My.Settings.ArchiveDir, jobName)
+        If cmbLavoro.SelectedIndex < 0 Then
+            UpdateUiState()
+            Return
+        End If
+
+        If cmbSede.SelectedIndex < 0 Then
+            UpdateUiState()
+            Return
+        End If
+
+        ' se il lavoro è bloccato (in export) non caricare nulla
+        If IsCurrentJobLocked() Then
+            _currentJobPath = ""
+            _list.Clear()
+
+            If picPreview.Image IsNot Nothing Then
+                picPreview.Image.Dispose()
+                picPreview.Image = Nothing
+            End If
+
+            UpdateUiState()
+            Return
+        End If
+
+        Dim sede = cmbSede.SelectedItem.ToString()
+        Dim lavoro = cmbLavoro.SelectedItem.ToString()
+
+        _currentJobPath = Path.Combine(My.Settings.ArchiveDir, sede, lavoro)
 
         LoadMetadata(_currentJobPath)
         LoadJobFiles(_currentJobPath)
+
+        UpdateUiState()
     End Sub
     'creo directori nuova dal combobox
     Private Sub cmbLavoro_KeyDown(sender As Object, e As KeyEventArgs) Handles cmbLavoro.KeyDown
         If e.KeyCode <> Keys.Enter Then Return
         e.SuppressKeyPress = True
+
+        ' serve sede selezionata
+        If cmbSede.SelectedItem Is Nothing Then
+            MessageBox.Show("Seleziona prima la sede (Cervia/Russi/Altro).")
+            Return
+        End If
 
         Dim name As String = cmbLavoro.Text.Trim()
         If name = "" Then Return
@@ -207,16 +265,30 @@ Public Class Form1
             Return
         End If
 
-        Dim jobPath = Path.Combine(arch, name)
+        Dim sede As String = cmbSede.SelectedItem.ToString()
+        Dim sedePath = Path.Combine(arch, sede)
+        Dim jobPath = Path.Combine(sedePath, name)
 
         Try
-            If Not Directory.Exists(jobPath) Then
-                Directory.CreateDirectory(jobPath)
-                LoadJobsCombo()
+            ' crea cartella sede se manca
+            If Not Directory.Exists(sedePath) Then
+                Directory.CreateDirectory(sedePath)
             End If
 
+            ' crea nuovo lavoro se manca
+            If Not Directory.Exists(jobPath) Then
+                Directory.CreateDirectory(jobPath)
+            End If
+
+            ' aggiorna combobox lavori della sede e seleziona il nuovo
+            cmbLavoro.Items.Clear()
+            Dim dirs = Directory.GetDirectories(sedePath)
+            Array.Sort(dirs, StringComparer.OrdinalIgnoreCase)
+            For Each d In dirs
+                cmbLavoro.Items.Add(Path.GetFileName(d))
+            Next
+
             cmbLavoro.SelectedItem = name
-            LoadJobFiles(jobPath)
 
         Catch ex As Exception
             MessageBox.Show(ex.Message, "Errore creazione cartella")
@@ -350,6 +422,7 @@ Public Class Form1
         Catch ex As Exception
             MessageBox.Show(ex.Message, "Errore", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
+        UpdateUiState()
     End Sub
 
     Private Sub LoadExistingFiles()
@@ -392,6 +465,7 @@ Public Class Form1
 
         btnStart.Enabled = True
         btnStop.Enabled = False
+        UpdateUiState()
     End Sub
 
     Private Sub Worker_LogLine(text As String)
@@ -561,6 +635,7 @@ Public Class Form1
                 _worker.Start()
             End If
         End Try
+        UpdateUiState()
     End Sub
     'Seleziono un file nella lista e aggiorno anteprima
     Private Sub dgvFiles_SelectionChanged(sender As Object, e As EventArgs) Handles dgvFiles.SelectionChanged
@@ -749,34 +824,64 @@ Public Class Form1
         f.ShowDialog(Me)
     End Sub
 
-    Private Async Sub btnExport_Click(sender As Object, e As EventArgs) Handles btnExport.Click
-        Dim oldTitle As String = Me.Text
 
-        If String.IsNullOrWhiteSpace(My.Settings.ArchiveDir) Then
-            MessageBox.Show("Imposta ARCHIVIO nelle Impostazioni (⚙).")
+    Private Sub btnExport_Click(sender As Object, e As EventArgs) Handles btnExport.Click
+        If String.IsNullOrWhiteSpace(My.Settings.OutDir) Then
+            MessageBox.Show("Imposta OUT nelle Impostazioni (⚙).")
             Return
         End If
-        If Not Directory.Exists(My.Settings.ArchiveDir) Then
-            MessageBox.Show("La cartella ARCHIVIO non esiste:" & Environment.NewLine & My.Settings.ArchiveDir)
-            Return
-        End If
+
+        EnqueueCurrentExport()
+        TryStartNextExport()
+    End Sub
+
+
+    Private Async Sub TryStartNextExport()
+
+        If _isExportRunning Then Return
+        If _exportQueue.Count = 0 Then Return
+
+        _isExportRunning = True
+        UpdateUiState()
+
+        Dim t = _exportQueue.Peek() ' non rimuovo finché non finisce
 
         Try
-            If String.IsNullOrWhiteSpace(My.Settings.OutDir) Then
-                MessageBox.Show("Imposta OUT nelle Impostazioni (⚙).")
-                Return
-            End If
+            ' copia rotazioni (thread-safe)
+            Dim rotCopy As New Dictionary(Of String, Integer)(_rotationMap, StringComparer.OrdinalIgnoreCase)
 
-            Dim folderName = InputBox("Nome cartella export (dentro OUT):", "Esporta",
-                                  "Export_" & DateTime.Now.ToString("yyyyMMdd_HHmm")).Trim()
-            If folderName = "" Then Return
+            ' snapshot file completamente in background
+            Dim items As List(Of ScanItem) =
+            Await Task.Run(Function()
+                               Dim lst As New List(Of ScanItem)
 
-            ' UI: mostra che sta lavorando
-            SetUiBusyForExport(True)
+                               For Each f In Directory.EnumerateFiles(t.JobPath, "*.tif*", SearchOption.AllDirectories)
 
+                                   Dim fi As New FileInfo(f)
+                                   Dim rel = f.Substring(t.JobPath.Length).TrimStart("\"c)
+
+                                   Dim rot As Integer = 0
+                                   If rotCopy.ContainsKey(rel) Then
+                                       rot = rotCopy(rel)
+                                   End If
+
+                                   lst.Add(New ScanItem With {
+                                       .RelPath = rel,
+                                       .FullPath = f,
+                                       .FileSizeBytes = fi.Length,
+                                       .PageInfo = "",
+                                       .Rotate = rot,
+                                       .CreatedAt = fi.CreationTime
+                                   })
+                               Next
+
+                               Return lst
+                           End Function)
+
+            ' prepara exporter
             Dim exporter As New PdfExportService With {
-            .OutRoot = My.Settings.OutDir,
-            .ExportFolderName = folderName,
+            .OutRoot = Path.Combine(t.OutRoot, t.Sede, t.Lavoro),
+            .ExportFolderName = t.ExportFolder,
             .JpegQ = My.Settings.JpegQ,
             .MagickExe = My.Settings.MagickExe,
             .GhostscriptExe = My.Settings.GhostscriptExe,
@@ -789,48 +894,46 @@ Public Class Form1
             AddHandler exporter.Progress,
             Sub(cur As Integer, tot As Integer, relp As String)
                 If _ui Is Nothing Then Return
-
-                Dim rowIndex As Integer = cur - 1 ' cur è 1-based
-
-                _ui.Post(Sub()
-                             Me.Text = $"ScannerTiff - Export {cur}/{tot} - {relp}"
-                             SelectRowInDgv(rowIndex)
+                _ui.Post(Sub(state)
+                             Me.Text = $"ScannerTiff - Export {t.Sede}\{t.Lavoro} {cur}/{tot}"
                          End Sub, Nothing)
             End Sub
 
-            ' snapshot lista
-            Dim items = _list.ToList()
+            ' export completamente fuori dal thread UI
+            Await Task.Run(Sub()
+                               exporter.ExportAllAsync(items).GetAwaiter().GetResult()
+                           End Sub)
 
-            ' 0) export PDF
-            Await exporter.ExportAllAsync(items)
+            ' finito OK
+            _exportQueue.Dequeue()
+            UnlockJob(t.Sede, t.Lavoro)
 
-            ' 1) copia originali in Archivio
-            ArchiveOriginalTiffs(items, My.Settings.ArchiveDir, folderName)
+        Catch ex As Exception
 
-            ' 2) ferma il monitor (programma in STOP)
-            StopMonitoring()
+            Worker_LogLine("ERR export queue: " & ex.Message)
 
-            ' 3) libera anteprima (evita lock GDI+ su file in WORK)
-            If picPreview.Image IsNot Nothing Then
-                picPreview.Image.Dispose()
-                picPreview.Image = Nothing
+            _exportQueue.Dequeue()
+            UnlockJob(t.Sede, t.Lavoro)
+
+        Finally
+
+            _isExportRunning = False
+            Me.Text = "ScannerTiff"
+            UpdateUiState()
+
+            ' parte il prossimo
+            If _exportQueue.Count > 0 Then
+                TryStartNextExport()
             End If
 
-            ' 4) svuota COMPLETAMENTE WORK (file + cartelle)
-            ClearWorkFolder()
-
-            ' 5) pulisci lista UI
-            _list.Clear()
-
-            MessageBox.Show("Export completato in: " & Path.Combine(My.Settings.OutDir, folderName))
-        Catch ex As Exception
-            MessageBox.Show(ex.Message, "Errore export")
-        Finally
-            ' UI: ripristina
-            SetUiBusyForExport(False)
-            Me.Text = oldTitle
         End Try
+
     End Sub
+
+
+
+
+
     Private Sub SetUiBusyForExport(isBusy As Boolean)
         Me.UseWaitCursor = isBusy
 
@@ -1035,5 +1138,147 @@ Public Class Form1
 
         _rotationMap = newMap
         SaveMetadata(jobPath)
+    End Sub
+    'cambia stato pulsanti
+    Private Sub UpdateUiState()
+        Dim isLocked As Boolean = IsCurrentJobLocked()
+        Dim sede As String = If(cmbSede.SelectedItem Is Nothing, "", cmbSede.SelectedItem.ToString().Trim())
+        Dim lavoro As String = cmbLavoro.Text.Trim()
+
+        cmbLavoro.Enabled = (cmbSede.SelectedIndex >= 0)
+
+        Dim jobPath As String = ""
+        If sede <> "" AndAlso lavoro <> "" Then
+            jobPath = Path.Combine(My.Settings.ArchiveDir, sede, lavoro)
+        End If
+
+        Dim hasValidJob As Boolean =
+        (sede <> "") AndAlso (lavoro <> "") AndAlso Directory.Exists(jobPath)
+
+        ' Se NON valido → svuota lista e anteprima
+        If Not hasValidJob Then
+            _list.Clear()
+
+            If picPreview.Image IsNot Nothing Then
+                picPreview.Image.Dispose()
+                picPreview.Image = Nothing
+            End If
+
+            _currentJobPath = ""
+        End If
+
+        Dim hasFiles As Boolean = hasValidJob AndAlso _list IsNot Nothing AndAlso _list.Count > 0
+
+        btnStart.Enabled = hasValidJob AndAlso Not _isMonitoring AndAlso Not isLocked
+        btnStop.Enabled = hasValidJob AndAlso _isMonitoring AndAlso Not isLocked
+
+        btnDelete.Enabled = hasFiles AndAlso dgvFiles.CurrentRow IsNot Nothing AndAlso Not isLocked
+        btnExport.Enabled = hasFiles AndAlso Not isLocked
+        cmbRotateAll.Enabled = hasValidJob AndAlso Not isLocked
+    End Sub
+    'Controllo metre scrivo la direcotory nuova
+    Private Sub cmbLavoro_TextChanged(sender As Object, e As EventArgs) Handles cmbLavoro.TextChanged
+        UpdateUiState()
+    End Sub
+    'Cambio Comune
+    Private Sub cmbSede_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cmbSede.SelectedIndexChanged
+
+        cmbLavoro.Items.Clear()
+        ' reset selezione lavoro precedente
+        cmbLavoro.SelectedIndex = -1
+        cmbLavoro.Text = ""
+        _currentJobPath = ""
+
+        _list.Clear()
+        UpdateUiState()
+
+        If cmbSede.SelectedIndex < 0 Then
+            UpdateUiState()
+            Return
+        End If
+
+        Dim sedePath = Path.Combine(My.Settings.ArchiveDir, cmbSede.SelectedItem.ToString())
+
+        If Not Directory.Exists(sedePath) Then
+            Directory.CreateDirectory(sedePath)
+        End If
+
+        ' carica le sottocartelle come lavori
+        Dim dirs = Directory.GetDirectories(sedePath)
+        Array.Sort(dirs, StringComparer.OrdinalIgnoreCase)
+
+        For Each d In dirs
+            cmbLavoro.Items.Add(Path.GetFileName(d))
+        Next
+
+        UpdateUiState()
+    End Sub
+    'Tasto reset
+    Private Sub btnReset_Click(sender As Object, e As EventArgs) Handles btnReset.Click
+
+        ' ferma monitor se attivo
+        Try
+            If _isMonitoring AndAlso _worker IsNot Nothing Then _worker.Stop()
+        Catch
+        End Try
+        _isMonitoring = False
+
+        ' svuota selezioni
+        cmbSede.SelectedIndex = -1
+        cmbLavoro.Items.Clear()
+        cmbLavoro.SelectedIndex = -1
+        cmbLavoro.Text = ""
+
+        ' stato interno
+        _currentJobPath = ""
+        _rotationMap.Clear()
+
+        ' svuota lista + anteprima
+        _list.Clear()
+
+        If picPreview.Image IsNot Nothing Then
+            picPreview.Image.Dispose()
+            picPreview.Image = Nothing
+        End If
+
+        UpdateUiState()
+    End Sub
+    'Blocco il blocco ai lavori 
+    Private Sub LockCurrentJobForExport()
+        If cmbSede.SelectedItem Is Nothing Then Return
+        Dim sede = cmbSede.SelectedItem.ToString()
+        Dim lavoro = cmbLavoro.Text.Trim()
+        If String.IsNullOrWhiteSpace(lavoro) Then Return
+
+        _lockedJobs.Add(JobKey(sede, lavoro))
+        UpdateUiState()
+    End Sub
+    'Sblocca
+    Private Sub UnlockJob(sede As String, lavoro As String)
+        _lockedJobs.Remove(JobKey(sede, lavoro))
+        UpdateUiState()
+    End Sub
+    'Accoda il lavoro corrente
+    Private Sub EnqueueCurrentExport()
+        If cmbSede.SelectedItem Is Nothing Then Return
+        Dim sede = cmbSede.SelectedItem.ToString()
+        Dim lavoro = cmbLavoro.Text.Trim()
+        If String.IsNullOrWhiteSpace(lavoro) Then Return
+        If String.IsNullOrWhiteSpace(_currentJobPath) OrElse Not Directory.Exists(_currentJobPath) Then Return
+
+        ' lock logico
+        _lockedJobs.Add(JobKey(sede, lavoro))
+
+        ' task in coda (nome export automatico)
+        Dim t As New ExportTask With {
+        .Sede = sede,
+        .Lavoro = lavoro,
+        .JobPath = _currentJobPath,
+        .OutRoot = My.Settings.OutDir,
+        .ExportFolder = "Export_" & DateTime.Now.ToString("yyyyMMdd_HHmmss")
+    }
+
+        _exportQueue.Enqueue(t)
+        UpdateUiState()
     End Sub
 End Class

@@ -37,6 +37,8 @@ Partial Class Form1
         Label1 = New Label()
         chkAnteprima = New CheckBox()
         cmbLavoro = New ComboBox()
+        cmbSede = New ComboBox()
+        btnReset = New Button()
         CType(dgvFiles, ComponentModel.ISupportInitialize).BeginInit()
         CType(picPreview, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
@@ -98,7 +100,7 @@ Partial Class Form1
         picPreview.Location = New Point(1148, 141)
         picPreview.Margin = New Padding(4, 2, 4, 2)
         picPreview.Name = "picPreview"
-        picPreview.Size = New Size(1055, 1436)
+        picPreview.Size = New Size(1055, 723)
         picPreview.SizeMode = PictureBoxSizeMode.Zoom
         picPreview.TabIndex = 11
         picPreview.TabStop = False
@@ -172,11 +174,32 @@ Partial Class Form1
         cmbLavoro.Size = New Size(368, 40)
         cmbLavoro.TabIndex = 22
         ' 
+        ' cmbSede
+        ' 
+        cmbSede.DropDownStyle = ComboBoxStyle.DropDownList
+        cmbSede.FormattingEnabled = True
+        cmbSede.Items.AddRange(New Object() {"Cervia", "Russi", "Altro"})
+        cmbSede.Location = New Point(1207, 30)
+        cmbSede.Name = "cmbSede"
+        cmbSede.Size = New Size(231, 40)
+        cmbSede.TabIndex = 23
+        ' 
+        ' btnReset
+        ' 
+        btnReset.Location = New Point(1526, 37)
+        btnReset.Name = "btnReset"
+        btnReset.Size = New Size(122, 58)
+        btnReset.TabIndex = 24
+        btnReset.Text = "Reset"
+        btnReset.UseVisualStyleBackColor = True
+        ' 
         ' Form1
         ' 
         AutoScaleDimensions = New SizeF(13F, 32F)
         AutoScaleMode = AutoScaleMode.Font
         ClientSize = New Size(2243, 1598)
+        Controls.Add(btnReset)
+        Controls.Add(cmbSede)
         Controls.Add(cmbLavoro)
         Controls.Add(chkAnteprima)
         Controls.Add(Label1)
@@ -213,5 +236,7 @@ Partial Class Form1
     Friend WithEvents Label1 As Label
     Friend WithEvents chkAnteprima As CheckBox
     Friend WithEvents cmbLavoro As ComboBox
+    Friend WithEvents cmbSede As ComboBox
+    Friend WithEvents btnReset As Button
 
 End Class

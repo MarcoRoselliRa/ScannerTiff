@@ -8,5 +8,5 @@
   <AuthenticationMode>0</AuthenticationMode>
   <SaveMySettingsOnExit>true</SaveMySettingsOnExit>
   <SplashScreen>frmSplash</SplashScreen>
-  <MinimumSplashScreenDisplayTime>3000</MinimumSplashScreenDisplayTime>
+  <MinimumSplashScreenDisplayTime>500</MinimumSplashScreenDisplayTime>
 </MyApplicationData>
