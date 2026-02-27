@@ -33,6 +33,7 @@ Public Class PdfExportService
 
     End Function
 
+
     Private Sub ExportOne(it As ScanItem, baseOut As String)
         Try
             Dim rel = If(it.RelPath, Path.GetFileName(it.FullPath))
@@ -62,7 +63,7 @@ Public Class PdfExportService
             If deg <> 0 Then rotateArg = $" -rotate {deg} "
 
             Dim args1 = $"""{it.FullPath}""{rotateArg} -define pdf:fit-page=true ""{tmpPdf}"""
-            Dim r1 = RunProcess(MagickExe, args1)
+            Dim r1 = RunProcess(MagickExe, args1) '
 
             If r1.ExitCode <> 0 OrElse Not File.Exists(tmpPdf) Then
                 RaiseEvent LogLine("ERR Magick: " & TrimOutput(r1.AllOutput))
@@ -70,6 +71,8 @@ Public Class PdfExportService
                 SafeDelete(tmpPdf)
                 Return
             End If
+
+
 
             ' 2) compress PDF (Ghostscript) come nel converter :contentReference[oaicite:1]{index=1}
             Dim q = Math.Max(30, Math.Min(95, JpegQ))

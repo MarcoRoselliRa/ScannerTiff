@@ -22,6 +22,9 @@ Public Class Form1
     Private _isExporting As Boolean = False
     Private _loadingSettings As Boolean = False
     Private _previewEnabled As Boolean = False
+    Private _currentJobPath As String = ""
+    Private _rotationMap As New Dictionary(Of String, Integer)(StringComparer.OrdinalIgnoreCase)
+
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         _ui = SynchronizationContext.Current
         _items.DataSource = _list
@@ -102,7 +105,165 @@ Public Class Form1
 
         chkAnteprima.Checked = My.Settings.PreviewEnabled
         _previewEnabled = chkAnteprima.Checked
+        LoadJobsCombo()
     End Sub
+    'Percorso medadata
+    Private Function GetMetadataPath(jobPath As String) As String
+        Return Path.Combine(jobPath, "metadata.json")
+    End Function
+    'Salva metadata Json
+    Private Sub SaveMetadata(jobPath As String)
+        Try
+            Dim path = GetMetadataPath(jobPath)
+            Dim json = System.Text.Json.JsonSerializer.Serialize(_rotationMap,
+                    New System.Text.Json.JsonSerializerOptions With {
+                        .WriteIndented = True
+                    })
+            File.WriteAllText(path, json)
+        Catch ex As Exception
+            Worker_LogLine("Errore salvataggio metadata: " & ex.Message)
+        End Try
+    End Sub
+    'Carica i metadata
+    Private Sub LoadMetadata(jobPath As String)
+        _rotationMap.Clear()
+
+        Try
+            Dim path = GetMetadataPath(jobPath)
+
+            ' ✅ Se il file NON esiste → crealo con rotazione standard
+            If Not File.Exists(path) Then
+                Dim defaultRotate As Integer = 0
+
+                ' se vuoi prendere la rotazione dal cmbRotateAll
+                If cmbRotateAll.SelectedItem IsNot Nothing Then
+                    Integer.TryParse(cmbRotateAll.SelectedItem.ToString(), defaultRotate)
+                End If
+
+                ' inizializza mappa con tutti i file presenti
+                For Each f In Directory.EnumerateFiles(jobPath, "*.tif*", SearchOption.AllDirectories)
+                    Dim rel = f.Substring(jobPath.Length).TrimStart("\"c)
+                    _rotationMap(rel) = defaultRotate
+                Next
+
+                SaveMetadata(jobPath)
+                Return
+            End If
+
+            ' ✅ Se esiste → caricalo
+            Dim json = File.ReadAllText(path)
+            _rotationMap =
+            System.Text.Json.JsonSerializer.Deserialize(Of Dictionary(Of String, Integer))(json)
+
+            If _rotationMap Is Nothing Then
+                _rotationMap = New Dictionary(Of String, Integer)(StringComparer.OrdinalIgnoreCase)
+            End If
+
+        Catch ex As Exception
+            Worker_LogLine("Errore caricamento metadata: " & ex.Message)
+        End Try
+    End Sub
+    'carica le cartelle da Archivio
+    Private Sub LoadJobsCombo()
+        cmbLavoro.Items.Clear()
+
+        Dim arch As String = My.Settings.ArchiveDir
+        If String.IsNullOrWhiteSpace(arch) Then Return
+        If Not Directory.Exists(arch) Then Return
+
+        Dim dirs = Directory.GetDirectories(arch)
+        Array.Sort(dirs, StringComparer.OrdinalIgnoreCase)
+
+        For Each d In dirs
+            cmbLavoro.Items.Add(Path.GetFileName(d))
+        Next
+    End Sub
+    'evento combobox lavori
+    Private Sub cmbLavoro_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cmbLavoro.SelectedIndexChanged
+        If cmbLavoro.SelectedIndex < 0 Then Return
+
+        Dim jobName As String = cmbLavoro.SelectedItem.ToString()
+        _currentJobPath = Path.Combine(My.Settings.ArchiveDir, jobName)
+
+        LoadMetadata(_currentJobPath)
+        LoadJobFiles(_currentJobPath)
+    End Sub
+    'creo directori nuova dal combobox
+    Private Sub cmbLavoro_KeyDown(sender As Object, e As KeyEventArgs) Handles cmbLavoro.KeyDown
+        If e.KeyCode <> Keys.Enter Then Return
+        e.SuppressKeyPress = True
+
+        Dim name As String = cmbLavoro.Text.Trim()
+        If name = "" Then Return
+
+        ' pulizia base nome cartella
+        For Each ch In Path.GetInvalidFileNameChars()
+            name = name.Replace(ch, "_"c)
+        Next
+
+        Dim arch As String = My.Settings.ArchiveDir
+        If String.IsNullOrWhiteSpace(arch) OrElse Not Directory.Exists(arch) Then
+            MessageBox.Show("Archivio non impostato o non esiste.")
+            Return
+        End If
+
+        Dim jobPath = Path.Combine(arch, name)
+
+        Try
+            If Not Directory.Exists(jobPath) Then
+                Directory.CreateDirectory(jobPath)
+                LoadJobsCombo()
+            End If
+
+            cmbLavoro.SelectedItem = name
+            LoadJobFiles(jobPath)
+
+        Catch ex As Exception
+            MessageBox.Show(ex.Message, "Errore creazione cartella")
+        End Try
+    End Sub
+    'Carico i lavori nella lista
+    Private Sub LoadJobFiles(jobPath As String)
+        _list.Clear()
+
+        If Not Directory.Exists(jobPath) Then Return
+
+        For Each f In Directory.EnumerateFiles(jobPath, "*.tif*", SearchOption.AllDirectories)
+            Dim fi As New FileInfo(f)
+
+            ' Percorso relativo rispetto alla cartella lavoro
+            Dim rel = f.Substring(jobPath.Length).TrimStart("\"c)
+
+            Dim rot As Integer = 0
+            If _rotationMap.ContainsKey(rel) Then rot = _rotationMap(rel)
+
+            _list.Add(New ScanItem With {
+            .RelPath = rel,
+            .FullPath = f,
+            .FileSizeBytes = fi.Length,
+            .PageInfo = GetPageInfo(f),
+            .Rotate = rot,
+            .CreatedAt = fi.CreationTime
+        })
+        Next
+    End Sub
+    'Prossimo numero files
+    Private Function GetNextProgressiveFileName(jobPath As String, ext As String) As String
+        Dim maxN As Integer = 0
+
+        If Directory.Exists(jobPath) Then
+            For Each f In Directory.EnumerateFiles(jobPath, "*.tif*", SearchOption.AllDirectories)
+                Dim name = Path.GetFileNameWithoutExtension(f)
+                Dim n As Integer
+                If Integer.TryParse(name, n) Then
+                    If n > maxN Then maxN = n
+                End If
+            Next
+        End If
+
+        Dim nextN = maxN + 1
+        Return nextN.ToString("D5") & ext
+    End Function
     Private Sub chkAnteprima_CheckedChanged(sender As Object, e As EventArgs) Handles chkAnteprima.CheckedChanged
         _previewEnabled = chkAnteprima.Checked
 
@@ -120,22 +281,25 @@ Public Class Form1
             If it IsNot Nothing Then ShowPreview(it.FullPath, it.Rotate)
         End If
     End Sub
+    'Ruota tutto
     Private Sub cmbRotateAll_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cmbRotateAll.SelectedIndexChanged
-        If _loadingSettings Then Return
-        Dim def = GetDefaultRotate()
-        My.Settings.DefaultRotate = def
-        My.Settings.Save()
+        If String.IsNullOrWhiteSpace(_currentJobPath) Then Return
+        If cmbRotateAll.SelectedItem Is Nothing Then Return
 
-        For Each it In _list
-            it.Rotate = def
+        Dim deg As Integer
+        If Not Integer.TryParse(cmbRotateAll.SelectedItem.ToString(), deg) Then Return
+
+        ' aggiorna tutte le righe + mappa rotazioni
+        For Each si As ScanItem In _list
+            si.Rotate = deg
+            _rotationMap(si.RelPath) = deg
         Next
 
-        ' refresh griglia
-        dgvFiles.Refresh()
+        ' salva json
+        SaveMetadata(_currentJobPath)
 
-        ' aggiorna anteprima riga selezionata
-        Dim sel = GetSelectedItem()
-        If sel IsNot Nothing Then ShowPreview(sel.FullPath, sel.Rotate)
+        ' refresh griglia (BindingList di solito aggiorna, ma questo aiuta)
+        dgvFiles.Refresh()
     End Sub
 
     Private Sub btnStart_Click(sender As Object, e As EventArgs) Handles btnStart.Click
@@ -173,8 +337,10 @@ Public Class Form1
             Worker_LogLine("WORK: " & _worker.WorkDir)
             Worker_LogLine("SUB: " & _worker.SubDir)
 
-            ' mostra subito eventuali file già presenti in WORK (così capisci che la griglia funziona)
-            LoadExistingFiles()
+            ' ricarica il lavoro selezionato (Archivio), così Stop/Start non svuota la lista
+            If Not String.IsNullOrWhiteSpace(_currentJobPath) AndAlso Directory.Exists(_currentJobPath) Then
+                LoadJobFiles(_currentJobPath)
+            End If
 
             _worker.Start()
             _isMonitoring = True
@@ -242,28 +408,58 @@ Public Class Form1
                  End Sub, Nothing)
     End Sub
 
-
+    'controllo la directori work
     Private Sub Worker_ItemAdded(item As ScanItem)
-        If _ui Is Nothing Then Return
 
-        _ui.Post(Sub(state)
-                     Try
-                         item.Rotate = GetDefaultRotate()
-                         item.PageInfo = GetPageInfo(item.FullPath)
-                         _list.Add(item)
+        If String.IsNullOrWhiteSpace(_currentJobPath) Then
+            Worker_LogLine("Nessun lavoro selezionato.")
+            Return
+        End If
 
-                         ' ✅ aggiorna anteprima subito
-                         ShowPreview(item.FullPath, item.Rotate)
+        If Not Directory.Exists(_currentJobPath) Then
+            Worker_LogLine("Cartella lavoro non valida.")
+            Return
+        End If
 
-                         ' ✅ seleziona l’ultima riga
-                         If dgvFiles.Rows.Count > 0 Then
-                             dgvFiles.ClearSelection()
-                             dgvFiles.Rows(dgvFiles.Rows.Count - 1).Selected = True
-                             dgvFiles.FirstDisplayedScrollingRowIndex = dgvFiles.Rows.Count - 1
-                         End If
-                     Catch
-                     End Try
-                 End Sub, Nothing)
+        Try
+            ' attesa breve per sicurezza (file ancora in scrittura)
+            Threading.Thread.Sleep(200)
+
+            Dim ext = Path.GetExtension(item.FullPath)
+            If String.IsNullOrWhiteSpace(ext) Then ext = ".tif"
+            ext = ext.ToLowerInvariant()
+
+            ' --- 1) Manteniamo la sottocartella relativa ---
+            Dim relDir As String = Path.GetDirectoryName(item.RelPath)
+            Dim targetDir As String
+
+            If String.IsNullOrWhiteSpace(relDir) Then
+                targetDir = _currentJobPath
+            Else
+                targetDir = Path.Combine(_currentJobPath, relDir)
+            End If
+
+            Directory.CreateDirectory(targetDir)
+
+            ' --- 2) Nome progressivo globale sul lavoro ---
+            Dim newName = GetNextProgressiveFileName(_currentJobPath, ext)
+
+            ' --- 3) Destinazione finale ---
+            Dim destPath = Path.Combine(targetDir, newName)
+
+            File.Move(item.FullPath, destPath)
+
+            ' --- 4) Aggiornamento UI ---
+            If _ui IsNot Nothing Then
+                _ui.Post(Sub(state)
+                             LoadJobFiles(_currentJobPath)
+                         End Sub, Nothing)
+            End If
+
+        Catch ex As Exception
+            Worker_LogLine("Errore spostamento: " & ex.Message)
+        End Try
+
     End Sub
 
 
@@ -319,8 +515,7 @@ Public Class Form1
             Debug.WriteLine("Preview error: " & ex.Message)
         End Try
     End Sub
-
-
+    'Tasto cancella files
     Private Sub btnDelete_Click(sender As Object, e As EventArgs) Handles btnDelete.Click
         If dgvFiles.CurrentRow Is Nothing Then Return
 
@@ -349,11 +544,14 @@ Public Class Form1
             ' Elimina file
             If File.Exists(item.FullPath) Then File.Delete(item.FullPath)
 
-            ' Rinumera
-            RenumberAllWorkFiles()
+            If Not String.IsNullOrWhiteSpace(_currentJobPath) Then
+                ' Rinumera + riallinea metadata.json
+                RebuildMetadataAfterRenumber(_currentJobPath)
 
-            ' Ricarica lista
-            LoadExistingFiles()
+                ' Ricarica (ruote + lista)
+                LoadMetadata(_currentJobPath)
+                LoadJobFiles(_currentJobPath)
+            End If
 
         Catch ex As Exception
             MessageBox.Show(ex.Message, "Errore", MessageBoxButtons.OK, MessageBoxIcon.Error)
@@ -364,65 +562,29 @@ Public Class Form1
             End If
         End Try
     End Sub
-
-
-    Private Sub RenumberAllWorkFiles()
-        Dim root = My.Settings.WorkDir
-        If String.IsNullOrWhiteSpace(root) Then Return
-        If Not Directory.Exists(root) Then Return
-
-        ' Prendi tutti i tif (anche in sottocartelle)
-        Dim files = Directory.EnumerateFiles(root, "*.tif*", SearchOption.AllDirectories).ToList()
-
-        ' Ordina per numero se è numerico, altrimenti per nome
-        files.Sort(Function(a, b)
-                       Dim na As Integer, nb As Integer
-                       Dim sa = Path.GetFileNameWithoutExtension(a)
-                       Dim sb = Path.GetFileNameWithoutExtension(b)
-
-                       Dim ha = Integer.TryParse(sa, na)
-                       Dim hb = Integer.TryParse(sb, nb)
-
-                       If ha AndAlso hb Then Return na.CompareTo(nb)
-                       Return String.Compare(a, b, StringComparison.OrdinalIgnoreCase)
-                   End Function)
-
-        ' 1) Rinominare tutto in temporanei (per evitare collisioni)
-        Dim tempList As New List(Of (tempPath As String, finalFolder As String))()
-
-        For Each f In files
-            Dim folder = Path.GetDirectoryName(f)
-            Dim ext = If(Path.GetExtension(f).ToLowerInvariant() = ".tiff", ".tif", ".tif") ' uniformiamo a .tif
-            Dim tmp = Path.Combine(folder, "__tmp__" & Guid.NewGuid().ToString("N") & ext)
-            File.Move(f, tmp)
-            tempList.Add((tmp, folder))
-        Next
-
-        ' 2) Assegna nuovi numeri globali
-        Dim n As Integer = 1
-        For Each t In tempList
-            Dim finalName = n.ToString("D5") & ".tif"
-            Dim finalPath = Path.Combine(t.finalFolder, finalName)
-            File.Move(t.tempPath, finalPath)
-            n += 1
-        Next
-    End Sub
-
+    'Seleziono un file nella lista e aggiorno anteprima
     Private Sub dgvFiles_SelectionChanged(sender As Object, e As EventArgs) Handles dgvFiles.SelectionChanged
         Dim item = GetSelectedItem()
         If item Is Nothing Then Return
         ShowPreview(item.FullPath, item.Rotate)
     End Sub
-
+    'Cambia la rotazione
     Private Sub dgvFiles_CellValueChanged(sender As Object, e As DataGridViewCellEventArgs) Handles dgvFiles.CellValueChanged
         If e.RowIndex < 0 Then Return
         If dgvFiles.Columns(e.ColumnIndex).DataPropertyName <> "Rotate" Then Return
 
-        Dim item = TryCast(dgvFiles.Rows(e.RowIndex).DataBoundItem, ScanItem)
-        If item Is Nothing Then Return
+        Dim si = TryCast(dgvFiles.Rows(e.RowIndex).DataBoundItem, ScanItem)
+        If si Is Nothing Then Return
 
-        ' aggiorna anteprima con nuova rotazione
-        ShowPreview(item.FullPath, item.Rotate)
+        ' aggiorna anteprima con nuova rotazione (se la usi ancora)
+        ShowPreview(si.FullPath, si.Rotate)
+
+        ' --- salva rotazione nel metadata ---
+        _rotationMap(si.RelPath) = si.Rotate
+
+        If Not String.IsNullOrWhiteSpace(_currentJobPath) Then
+            SaveMetadata(_currentJobPath)
+        End If
     End Sub
 
     Private Sub dgvFiles_CurrentCellDirtyStateChanged(sender As Object, e As EventArgs) Handles dgvFiles.CurrentCellDirtyStateChanged
@@ -779,5 +941,99 @@ Public Class Form1
 
         ' 2) cancella tutte le cartelle rimaste vuote
         DeleteEmptyDirectories(root)
+    End Sub
+    'Rinomina la lista files
+    Private Sub RenumberAllJobFiles(root As String)
+        If String.IsNullOrWhiteSpace(root) Then Return
+        If Not Directory.Exists(root) Then Return
+
+        ' Prendi tutti i tif (anche in sottocartelle)
+        Dim files = Directory.EnumerateFiles(root, "*.tif*", SearchOption.AllDirectories).ToList()
+
+        ' Ordina per numero se è numerico, altrimenti per nome
+        files.Sort(Function(a, b)
+                       Dim na As Integer, nb As Integer
+                       Dim sa = Path.GetFileNameWithoutExtension(a)
+                       Dim sb = Path.GetFileNameWithoutExtension(b)
+
+                       Dim ha = Integer.TryParse(sa, na)
+                       Dim hb = Integer.TryParse(sb, nb)
+
+                       If ha AndAlso hb Then Return na.CompareTo(nb)
+                       Return String.Compare(a, b, StringComparison.OrdinalIgnoreCase)
+                   End Function)
+
+        ' 1) Rinominare tutto in temporanei (per evitare collisioni)
+        Dim tempList As New List(Of (tempPath As String, finalFolder As String, ext As String))()
+
+        For Each f In files
+            Dim folder = Path.GetDirectoryName(f)
+            Dim ext = Path.GetExtension(f).ToLowerInvariant()
+            If ext = ".tiff" Then ext = ".tif" ' uniformiamo
+            Dim tmp = Path.Combine(folder, "__tmp__" & Guid.NewGuid().ToString("N") & ext)
+            File.Move(f, tmp)
+            tempList.Add((tmp, folder, ext))
+        Next
+
+        ' 2) Assegna nuovi numeri globali (attraverso tutte le sottocartelle)
+        Dim n As Integer = 1
+        For Each t In tempList
+            Dim finalName = n.ToString("D5") & t.ext
+            Dim finalPath = Path.Combine(t.finalFolder, finalName)
+            File.Move(t.tempPath, finalPath)
+            n += 1
+        Next
+    End Sub
+    'Rinomino i files dentro Json
+    Private Sub RebuildMetadataAfterRenumber(jobPath As String)
+        If String.IsNullOrWhiteSpace(jobPath) OrElse Not Directory.Exists(jobPath) Then Return
+
+        ' 1) elenco file PRIMA (ordinato come rinumerazione)
+        Dim beforeFiles = Directory.EnumerateFiles(jobPath, "*.tif*", SearchOption.AllDirectories).ToList()
+        beforeFiles.Sort(Function(a, b)
+                             Dim na As Integer, nb As Integer
+                             Dim sa = Path.GetFileNameWithoutExtension(a)
+                             Dim sb = Path.GetFileNameWithoutExtension(b)
+                             Dim ha = Integer.TryParse(sa, na)
+                             Dim hb = Integer.TryParse(sb, nb)
+                             If ha AndAlso hb Then Return na.CompareTo(nb)
+                             Return String.Compare(a, b, StringComparison.OrdinalIgnoreCase)
+                         End Function)
+
+        ' 2) rotazioni in ordine (se manca => 0)
+        Dim rotations As New List(Of Integer)
+        For Each f In beforeFiles
+            Dim rel = f.Substring(jobPath.Length).TrimStart("\"c)
+            Dim r As Integer = 0
+            If _rotationMap.ContainsKey(rel) Then r = _rotationMap(rel)
+            rotations.Add(r)
+        Next
+
+        ' 3) rinumera
+        RenumberAllJobFiles(jobPath)
+
+        ' 4) elenco file DOPO (stesso ordinamento)
+        Dim afterFiles = Directory.EnumerateFiles(jobPath, "*.tif*", SearchOption.AllDirectories).ToList()
+        afterFiles.Sort(Function(a, b)
+                            Dim na As Integer, nb As Integer
+                            Dim sa = Path.GetFileNameWithoutExtension(a)
+                            Dim sb = Path.GetFileNameWithoutExtension(b)
+                            Dim ha = Integer.TryParse(sa, na)
+                            Dim hb = Integer.TryParse(sb, nb)
+                            If ha AndAlso hb Then Return na.CompareTo(nb)
+                            Return String.Compare(a, b, StringComparison.OrdinalIgnoreCase)
+                        End Function)
+
+        ' 5) ricostruisci mappa (per posizione)
+        Dim newMap As New Dictionary(Of String, Integer)(StringComparer.OrdinalIgnoreCase)
+        Dim count = Math.Min(afterFiles.Count, rotations.Count)
+
+        For i As Integer = 0 To count - 1
+            Dim relNew = afterFiles(i).Substring(jobPath.Length).TrimStart("\"c)
+            newMap(relNew) = rotations(i)
+        Next
+
+        _rotationMap = newMap
+        SaveMetadata(jobPath)
     End Sub
 End Class

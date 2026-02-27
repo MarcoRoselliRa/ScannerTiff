@@ -36,6 +36,7 @@ Partial Class Form1
         cmbRotateAll = New ComboBox()
         Label1 = New Label()
         chkAnteprima = New CheckBox()
+        cmbLavoro = New ComboBox()
         CType(dgvFiles, ComponentModel.ISupportInitialize).BeginInit()
         CType(picPreview, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
@@ -114,7 +115,7 @@ Partial Class Form1
         ' 
         ' btnSettings
         ' 
-        btnSettings.Location = New Point(897, 4)
+        btnSettings.Location = New Point(967, 2)
         btnSettings.Margin = New Padding(4, 2, 4, 2)
         btnSettings.Name = "btnSettings"
         btnSettings.Size = New Size(119, 49)
@@ -163,11 +164,20 @@ Partial Class Form1
         chkAnteprima.Text = "Anteprima"
         chkAnteprima.UseVisualStyleBackColor = True
         ' 
+        ' cmbLavoro
+        ' 
+        cmbLavoro.FormattingEnabled = True
+        cmbLavoro.Location = New Point(563, 17)
+        cmbLavoro.Name = "cmbLavoro"
+        cmbLavoro.Size = New Size(368, 40)
+        cmbLavoro.TabIndex = 22
+        ' 
         ' Form1
         ' 
         AutoScaleDimensions = New SizeF(13F, 32F)
         AutoScaleMode = AutoScaleMode.Font
         ClientSize = New Size(2243, 1598)
+        Controls.Add(cmbLavoro)
         Controls.Add(chkAnteprima)
         Controls.Add(Label1)
         Controls.Add(cmbRotateAll)
@@ -202,5 +212,6 @@ Partial Class Form1
     Friend WithEvents cmbRotateAll As ComboBox
     Friend WithEvents Label1 As Label
     Friend WithEvents chkAnteprima As CheckBox
+    Friend WithEvents cmbLavoro As ComboBox
 
 End Class

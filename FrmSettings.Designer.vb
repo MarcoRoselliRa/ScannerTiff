@@ -44,7 +44,7 @@ Partial Class FrmSettings
         btnTestGhost = New Button()
         txtArchiveDir = New TextBox()
         Label7 = New Label()
-        Button1 = New Button()
+        btnBrowseArchivio = New Button()
         CType(NumericUpDown, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
         ' 
@@ -232,21 +232,21 @@ Partial Class FrmSettings
         Label7.TabIndex = 36
         Label7.Text = "Cartella ARCHIVIO"
         ' 
-        ' Button1
+        ' btnBrowseArchivio
         ' 
-        Button1.Location = New Point(782, 280)
-        Button1.Name = "Button1"
-        Button1.Size = New Size(137, 47)
-        Button1.TabIndex = 38
-        Button1.Text = "Button1"
-        Button1.UseVisualStyleBackColor = True
+        btnBrowseArchivio.Location = New Point(782, 280)
+        btnBrowseArchivio.Name = "btnBrowseArchivio"
+        btnBrowseArchivio.Size = New Size(137, 47)
+        btnBrowseArchivio.TabIndex = 38
+        btnBrowseArchivio.Text = "Button1"
+        btnBrowseArchivio.UseVisualStyleBackColor = True
         ' 
         ' FrmSettings
         ' 
         AutoScaleDimensions = New SizeF(13F, 32F)
         AutoScaleMode = AutoScaleMode.Font
         ClientSize = New Size(1119, 971)
-        Controls.Add(Button1)
+        Controls.Add(btnBrowseArchivio)
         Controls.Add(txtArchiveDir)
         Controls.Add(Label7)
         Controls.Add(btnTestGhost)
@@ -299,5 +299,5 @@ Partial Class FrmSettings
     Friend WithEvents btnTestGhost As Button
     Friend WithEvents txtArchiveDir As TextBox
     Friend WithEvents Label7 As Label
-    Friend WithEvents Button1 As Button
+    Friend WithEvents btnBrowseArchivio As Button
 End Class

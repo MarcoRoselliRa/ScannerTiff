@@ -5,12 +5,14 @@ Public Class FrmSettings
     Public Property OutDir As String
     Public Property SubDir As String
     Public Property LogText As String
+    Public Property ArchiveDir As String
 
     Private Sub FrmSettings_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         txtInDir.Text = InDir
         txtWorkDir.Text = WorkDir
         txtOutDir.Text = OutDir
         txtLog.Text = LogText
+        txtArchiveDir.Text = My.Settings.ArchiveDir
         MagickExe.Text = My.Settings.MagickExe
         GhostscriptExe.Text = My.Settings.GhostscriptExe
 
@@ -23,6 +25,7 @@ Public Class FrmSettings
         WorkDir = txtWorkDir.Text
         OutDir = txtOutDir.Text
         LogText = txtLog.Text
+        ArchiveDir = txtArchiveDir.Text
 
         My.Settings.ArchiveDir = txtArchiveDir.Text.Trim()
         My.Settings.MagickExe = MagickExe.Text.Trim()
@@ -31,6 +34,7 @@ Public Class FrmSettings
         My.Settings.InDir = txtInDir.Text
         My.Settings.WorkDir = txtWorkDir.Text
         My.Settings.OutDir = txtOutDir.Text
+        My.Settings.ArchiveDir = txtArchiveDir.Text
         My.Settings.Save()
 
         Me.DialogResult = DialogResult.OK
@@ -58,6 +62,12 @@ Public Class FrmSettings
             If f.ShowDialog = DialogResult.OK Then txtOutDir.Text = f.SelectedPath
         End Using
     End Sub
+    Private Sub btnBrowseArchivio_Click(sender As Object, e As EventArgs) Handles btnBrowseArchivio.Click
+        Using f As New FolderBrowserDialog
+            If f.ShowDialog = DialogResult.OK Then txtArchiveDir.Text = f.SelectedPath
+        End Using
+    End Sub
+
     Private Sub btnTestMagick_Click(sender As Object, e As EventArgs) Handles btnTestMagick.Click
         TestExe(MagickExe.Text.Trim(), "-version", "ImageMagick")
     End Sub
@@ -111,4 +121,6 @@ Public Class FrmSettings
                             MessageBoxIcon.Error)
         End Try
     End Sub
+
+
 End Class
