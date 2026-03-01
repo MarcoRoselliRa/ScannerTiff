@@ -14,23 +14,31 @@ Public Class PdfExportService
     Public Property GhostscriptExe As String = "gswin64c"
     Public Event Progress(current As Integer, total As Integer, relPath As String)
 
-    Public Async Function ExportAllAsync(items As IEnumerable(Of ScanItem)) As Task
+    Public Function ExportAllAsync(items As IEnumerable(Of ScanItem)) As Task
         If String.IsNullOrWhiteSpace(OutRoot) Then Throw New ArgumentException("OutRoot vuota")
-        If String.IsNullOrWhiteSpace(ExportFolderName) Then Throw New ArgumentException("Nome cartella export vuoto")
 
-        Dim baseOut = Path.Combine(OutRoot, ExportFolderName.Trim())
+        If String.IsNullOrWhiteSpace(OutRoot) Then Throw New ArgumentException("OutRoot vuota")
+
+        Dim baseOut As String = OutRoot
+        If Not String.IsNullOrWhiteSpace(ExportFolderName) Then
+            baseOut = Path.Combine(OutRoot, ExportFolderName.Trim())
+        End If
+
         Directory.CreateDirectory(baseOut)
-        Dim list = items.ToList()
-        Dim total = list.Count
-        Dim i As Integer = 0
+        ' Esegue TUTTO in background: enumerazione + loop + ExportOne
+        Return Task.Run(Sub()
+                            Directory.CreateDirectory(baseOut)
 
-        For Each it In list
-            i += 1
-            RaiseEvent Progress(i, total, it.RelPath)
-            Await Task.Run(Sub() ExportOne(it, baseOut))
-        Next
+                            Dim list = items.ToList()
+                            Dim total = list.Count
+                            Dim i As Integer = 0
 
-
+                            For Each it In list
+                                i += 1
+                                RaiseEvent Progress(i, total, it.RelPath)
+                                ExportOne(it, baseOut) ' <-- SINCRONO, già siamo nel Task.Run
+                            Next
+                        End Sub)
     End Function
 
 
@@ -87,27 +95,31 @@ Public Class PdfExportService
 
             Dim r2 = RunProcess(GhostscriptExe, args2)
 
-            SafeDelete(tmpPdf)
-
             If r2.ExitCode <> 0 OrElse Not File.Exists(outPdf) Then
                 RaiseEvent LogLine("ERR Ghostscript: " & TrimOutput(r2.AllOutput))
 
-                ' ✅ fallback migliore: salva il PDF “grezzo” creato da Magick
+                ' fallback: salva il PDF “grezzo” creato da Magick
                 Try
-                    File.Copy(tmpPdf, outPdf, True)
-                    RaiseEvent LogLine("FALLBACK -> salvato PDF NON compresso: " & outPdf)
-                    SafeDelete(tmpPdf)
-                    Return
+                    If File.Exists(tmpPdf) Then
+                        File.Copy(tmpPdf, outPdf, True)
+                        RaiseEvent LogLine("FALLBACK -> salvato PDF NON compresso: " & outPdf)
+                        SafeDelete(tmpPdf)
+                        Return
+                    End If
                 Catch ex As Exception
                     RaiseEvent LogLine("ERR fallback PDF grezzo: " & ex.Message)
                 End Try
+
+                SafeDelete(tmpPdf)
 
                 ' se anche questo fallisce, allora TIFF
                 If CopyTiffOnFailure Then CopyTiffFallback(it.FullPath, rel, outFolder)
                 Return
             End If
 
+            SafeDelete(tmpPdf)
             RaiseEvent LogLine("OK -> " & outPdf)
+
 
         Catch ex As Exception
             RaiseEvent LogLine("ERR ExportOne: " & ex.Message)

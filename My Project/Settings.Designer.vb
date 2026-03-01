@@ -173,6 +173,18 @@ Namespace My
                 Me("PreviewEnabled") = value
             End Set
         End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("Scanner Tiff")>  _
+        Public Property Versione() As String
+            Get
+                Return CType(Me("Versione"),String)
+            End Get
+            Set
+                Me("Versione") = value
+            End Set
+        End Property
     End Class
 End Namespace
 

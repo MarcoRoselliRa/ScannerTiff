@@ -22,37 +22,51 @@ Partial Class frmSplash
     'Non modificarla mediante l'editor del codice.
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
-        Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(frmSplash))
-        PictureBox1 = New PictureBox()
-        CType(PictureBox1, ComponentModel.ISupportInitialize).BeginInit()
+        Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(FrmSplash))
+        PicLogo = New PictureBox()
+        Label = New Label()
+        CType(PicLogo, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
         ' 
-        ' PictureBox1
+        ' PicLogo
         ' 
-        PictureBox1.Dock = DockStyle.Fill
-        PictureBox1.Image = CType(resources.GetObject("PictureBox1.Image"), Image)
-        PictureBox1.Location = New Point(0, 0)
-        PictureBox1.Name = "PictureBox1"
-        PictureBox1.Size = New Size(905, 506)
-        PictureBox1.SizeMode = PictureBoxSizeMode.StretchImage
-        PictureBox1.TabIndex = 0
-        PictureBox1.TabStop = False
+        PicLogo.Image = CType(resources.GetObject("PicLogo.Image"), Image)
+        PicLogo.Location = New Point(-314, -224)
+        PicLogo.Margin = New Padding(4, 2, 4, 2)
+        PicLogo.Name = "PicLogo"
+        PicLogo.Size = New Size(1369, 1118)
+        PicLogo.TabIndex = 0
+        PicLogo.TabStop = False
         ' 
-        ' frmSplash
+        ' Label
         ' 
-        AutoScaleDimensions = New SizeF(13.0F, 32.0F)
+        Label.AutoSize = True
+        Label.Location = New Point(994, 1015)
+        Label.Margin = New Padding(6, 0, 6, 0)
+        Label.Name = "Label"
+        Label.Size = New Size(312, 32)
+        Label.TabIndex = 1
+        Label.Text = "Versione 2.0 del 01/03/2026"
+        ' 
+        ' FrmSplash
+        ' 
+        AutoScaleDimensions = New SizeF(13F, 32F)
         AutoScaleMode = AutoScaleMode.Font
         AutoSize = True
-        ClientSize = New Size(905, 506)
+        ClientSize = New Size(1293, 1067)
         ControlBox = False
-        Controls.Add(PictureBox1)
+        Controls.Add(Label)
+        Controls.Add(PicLogo)
         FormBorderStyle = FormBorderStyle.None
-        Name = "frmSplash"
+        Margin = New Padding(4, 2, 4, 2)
+        Name = "FrmSplash"
         StartPosition = FormStartPosition.CenterScreen
         Text = "frmSplash"
-        CType(PictureBox1, ComponentModel.ISupportInitialize).EndInit()
+        CType(PicLogo, ComponentModel.ISupportInitialize).EndInit()
         ResumeLayout(False)
+        PerformLayout()
     End Sub
 
-    Friend WithEvents PictureBox1 As PictureBox
+    Friend WithEvents PicLogo As PictureBox
+    Friend WithEvents Label As Label
 End Class

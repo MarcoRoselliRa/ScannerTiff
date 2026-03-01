@@ -3,6 +3,7 @@ Imports System.Threading
 
 
 Public Class Form1
+    Private Const APP_VERSION As String = "ScannerTiff Ver. 2.0"
     Private _logBuffer As New List(Of String)()
     Private Const MaxLogLines As Integer = 500
     Private _worker As ScanMonitorWorker
@@ -26,12 +27,30 @@ Public Class Form1
     Private _rotationMap As New Dictionary(Of String, Integer)(StringComparer.OrdinalIgnoreCase)
     ' lavori bloccati durante export: chiave "Sede\Lavoro"
     Private _lockedJobs As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+    Private _queueUi As New System.ComponentModel.BindingList(Of ExportTask)()
+    Private _queueBs As New BindingSource()
     Private Class ExportTask
         Public Property Sede As String
         Public Property Lavoro As String
         Public Property JobPath As String
         Public Property OutRoot As String
-        Public Property ExportFolder As String
+
+        Public Property Status As String = "In coda"
+        Public Property Current As Integer = 0
+        Public Property Total As Integer = 0
+
+        Public ReadOnly Property DisplayName As String
+            Get
+                Return $"{Sede}\{Lavoro}"
+            End Get
+        End Property
+
+        Public ReadOnly Property ProgressText As String
+            Get
+                If Total <= 0 Then Return ""
+                Return $"{Current}/{Total}"
+            End Get
+        End Property
     End Class
 
     Private _exportQueue As New Queue(Of ExportTask)()
@@ -52,7 +71,9 @@ Public Class Form1
         _ui = SynchronizationContext.Current
         _items.DataSource = _list
         txtSubDir.Text = My.Settings.SubDir
-
+        Me.Text = APP_VERSION
+        My.Settings.Versione = APP_VERSION
+        My.Settings.Save()
 
         dgvFiles.DataSource = _items
 
@@ -131,6 +152,32 @@ Public Class Form1
         LoadJobsCombo()
         cmbLavoro.SelectedIndex = -1
         UpdateUiState()
+
+        _queueBs.DataSource = _queueUi
+        dgvQueue.DataSource = _queueBs
+
+        dgvQueue.Columns.Clear()
+        dgvQueue.AutoGenerateColumns = False
+        dgvQueue.RowHeadersVisible = False
+
+        dgvQueue.Columns.Add(New DataGridViewTextBoxColumn With {
+            .DataPropertyName = "DisplayName",
+            .HeaderText = "Lavoro",
+            .Width = 180
+        })
+
+        dgvQueue.Columns.Add(New DataGridViewTextBoxColumn With {
+            .DataPropertyName = "Status",
+            .HeaderText = "Stato",
+            .Width = 90
+        })
+
+        dgvQueue.Columns.Add(New DataGridViewTextBoxColumn With {
+            .DataPropertyName = "ProgressText",
+            .HeaderText = "File",
+            .Width = 70
+        })
+
     End Sub
     'Percorso medadata
     Private Function GetMetadataPath(jobPath As String) As String
@@ -377,7 +424,7 @@ Public Class Form1
     Private Sub btnStart_Click(sender As Object, e As EventArgs) Handles btnStart.Click
         Try
             If _worker Is Nothing Then
-                _worker = New ScanMonitorWorker()
+                _worker = New ScanMonitorWorker
             Else
                 ' se per caso era rimasto attivo, lo fermiamo e ripartiamo puliti
                 Try : _worker.Stop() : Catch : End Try
@@ -385,9 +432,9 @@ Public Class Form1
             ' ora esiste, quindi posso assegnare
             _worker.InDir = My.Settings.InDir
             _worker.WorkDir = My.Settings.WorkDir
-            _worker.SubDir = txtSubDir.Text.Trim()
+            _worker.SubDir = txtSubDir.Text.Trim
 
-            My.Settings.SubDir = txtSubDir.Text.Trim()
+            My.Settings.SubDir = txtSubDir.Text.Trim
             My.Settings.Save()
 
             ' (ri)collega sempre gli eventi
@@ -401,7 +448,7 @@ Public Class Form1
 
             _worker.InDir = My.Settings.InDir
             _worker.WorkDir = My.Settings.WorkDir
-            _worker.SubDir = txtSubDir.Text.Trim()
+            _worker.SubDir = txtSubDir.Text.Trim
 
             ' log di controllo
             Worker_LogLine("START premuto")
@@ -833,6 +880,7 @@ Public Class Form1
 
         EnqueueCurrentExport()
         TryStartNextExport()
+        btnReset.PerformClick()
     End Sub
 
 
@@ -845,6 +893,8 @@ Public Class Form1
         UpdateUiState()
 
         Dim t = _exportQueue.Peek() ' non rimuovo finché non finisce
+        t.Status = "In corso"
+        _queueBs.ResetBindings(False)
 
         Try
             ' copia rotazioni (thread-safe)
@@ -881,7 +931,7 @@ Public Class Form1
             ' prepara exporter
             Dim exporter As New PdfExportService With {
             .OutRoot = Path.Combine(t.OutRoot, t.Sede, t.Lavoro),
-            .ExportFolderName = t.ExportFolder,
+            .ExportFolderName = "",
             .JpegQ = My.Settings.JpegQ,
             .MagickExe = My.Settings.MagickExe,
             .GhostscriptExe = My.Settings.GhostscriptExe,
@@ -893,9 +943,13 @@ Public Class Form1
 
             AddHandler exporter.Progress,
             Sub(cur As Integer, tot As Integer, relp As String)
+                t.Current = cur
+                t.Total = tot
+
                 If _ui Is Nothing Then Return
                 _ui.Post(Sub(state)
                              Me.Text = $"ScannerTiff - Export {t.Sede}\{t.Lavoro} {cur}/{tot}"
+                             _queueBs.ResetBindings(False)
                          End Sub, Nothing)
             End Sub
 
@@ -906,19 +960,22 @@ Public Class Form1
 
             ' finito OK
             _exportQueue.Dequeue()
+            t.Status = "Finito"
+            _queueBs.ResetBindings(False)
             UnlockJob(t.Sede, t.Lavoro)
 
         Catch ex As Exception
 
             Worker_LogLine("ERR export queue: " & ex.Message)
-
+            t.Status = "Errore"
+            _queueBs.ResetBindings(False)
             _exportQueue.Dequeue()
             UnlockJob(t.Sede, t.Lavoro)
 
         Finally
 
             _isExportRunning = False
-            Me.Text = "ScannerTiff"
+            Me.Text = APP_VERSION
             UpdateUiState()
 
             ' parte il prossimo
@@ -1274,11 +1331,48 @@ Public Class Form1
         .Sede = sede,
         .Lavoro = lavoro,
         .JobPath = _currentJobPath,
-        .OutRoot = My.Settings.OutDir,
-        .ExportFolder = "Export_" & DateTime.Now.ToString("yyyyMMdd_HHmmss")
+        .OutRoot = My.Settings.OutDir
     }
 
         _exportQueue.Enqueue(t)
+        _queueUi.Add(t)
         UpdateUiState()
+    End Sub
+    'Apre finestra directory
+    Private Sub OpenFolder(path As String)
+        Try
+            If String.IsNullOrWhiteSpace(path) Then Return
+
+            If Not IO.Directory.Exists(path) Then
+                MessageBox.Show("Cartella non trovata:" & Environment.NewLine & path)
+                Return
+            End If
+
+            Process.Start(New ProcessStartInfo With {
+                .FileName = "explorer.exe",
+                .Arguments = """" & path & """",
+                .UseShellExecute = True
+            })
+        Catch ex As Exception
+            MessageBox.Show(ex.Message, "Errore apertura cartella")
+        End Try
+    End Sub
+    Private Sub btnOpenIn_Click(sender As Object, e As EventArgs) Handles btnOpenIn.Click
+        OpenFolder(My.Settings.InDir)
+    End Sub
+    Private Sub btnOpenOut_Click(sender As Object, e As EventArgs) Handles btnOpenOut.Click
+        OpenFolder(My.Settings.OutDir)
+    End Sub
+    Private Sub btnOpenArchive_Click(sender As Object, e As EventArgs) Handles btnOpenArchive.Click
+        OpenFolder(My.Settings.ArchiveDir)
+    End Sub
+    Private Sub btnOpenOutJob_Click(sender As Object, e As EventArgs) Handles btnOpenOutJob.Click
+        If cmbSede.SelectedItem Is Nothing Then Return
+        Dim sede = cmbSede.SelectedItem.ToString()
+        Dim lavoro = cmbLavoro.Text.Trim()
+        If String.IsNullOrWhiteSpace(lavoro) Then Return
+
+        Dim p = IO.Path.Combine(My.Settings.ArchiveDir, sede, lavoro)
+        OpenFolder(p)
     End Sub
 End Class

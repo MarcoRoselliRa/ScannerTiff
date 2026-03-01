@@ -45,207 +45,242 @@ Partial Class FrmSettings
         txtArchiveDir = New TextBox()
         Label7 = New Label()
         btnBrowseArchivio = New Button()
+        Label8 = New Label()
         CType(NumericUpDown, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
         ' 
         ' btnBrowseOut
         ' 
-        btnBrowseOut.Location = New Point(782, 199)
+        btnBrowseOut.Location = New Point(406, 111)
+        btnBrowseOut.Margin = New Padding(2, 1, 2, 1)
         btnBrowseOut.Name = "btnBrowseOut"
-        btnBrowseOut.Size = New Size(137, 47)
+        btnBrowseOut.Size = New Size(74, 23)
         btnBrowseOut.TabIndex = 25
-        btnBrowseOut.Text = "Button1"
+        btnBrowseOut.Text = "Open"
         btnBrowseOut.UseVisualStyleBackColor = True
         ' 
         ' txtOutDir
         ' 
-        txtOutDir.Location = New Point(24, 207)
+        txtOutDir.Location = New Point(13, 111)
+        txtOutDir.Margin = New Padding(2, 1, 2, 1)
         txtOutDir.Name = "txtOutDir"
-        txtOutDir.Size = New Size(719, 39)
+        txtOutDir.Size = New Size(389, 23)
         txtOutDir.TabIndex = 24
         ' 
         ' Label4
         ' 
         Label4.AutoSize = True
-        Label4.Location = New Point(24, 172)
+        Label4.Location = New Point(13, 95)
+        Label4.Margin = New Padding(2, 0, 2, 0)
         Label4.Name = "Label4"
-        Label4.Size = New Size(148, 32)
+        Label4.Size = New Size(74, 15)
         Label4.TabIndex = 23
         Label4.Text = "Cartella OUT"
         ' 
         ' txtLog
         ' 
-        txtLog.Location = New Point(24, 533)
+        txtLog.Location = New Point(13, 289)
+        txtLog.Margin = New Padding(2, 1, 2, 1)
         txtLog.Multiline = True
         txtLog.Name = "txtLog"
         txtLog.ScrollBars = ScrollBars.Vertical
-        txtLog.Size = New Size(1056, 381)
+        txtLog.Size = New Size(570, 237)
         txtLog.TabIndex = 22
         ' 
         ' btnBrowseWork
         ' 
-        btnBrowseWork.Location = New Point(782, 129)
+        btnBrowseWork.Location = New Point(406, 71)
+        btnBrowseWork.Margin = New Padding(2, 1, 2, 1)
         btnBrowseWork.Name = "btnBrowseWork"
-        btnBrowseWork.Size = New Size(137, 43)
+        btnBrowseWork.Size = New Size(74, 23)
         btnBrowseWork.TabIndex = 21
-        btnBrowseWork.Text = "Button1"
+        btnBrowseWork.Text = "Open"
         btnBrowseWork.UseVisualStyleBackColor = True
         ' 
         ' txtWorkDir
         ' 
-        txtWorkDir.Location = New Point(24, 131)
+        txtWorkDir.Location = New Point(13, 71)
+        txtWorkDir.Margin = New Padding(2, 1, 2, 1)
         txtWorkDir.Name = "txtWorkDir"
-        txtWorkDir.Size = New Size(719, 39)
+        txtWorkDir.Size = New Size(389, 23)
         txtWorkDir.TabIndex = 20
         ' 
         ' Label2
         ' 
         Label2.AutoSize = True
-        Label2.Location = New Point(24, 96)
+        Label2.Location = New Point(13, 52)
+        Label2.Margin = New Padding(2, 0, 2, 0)
         Label2.Name = "Label2"
-        Label2.Size = New Size(169, 32)
+        Label2.Size = New Size(84, 15)
         Label2.TabIndex = 19
         Label2.Text = "Cartella WORK"
         ' 
         ' btnBrowseIn
         ' 
-        btnBrowseIn.Location = New Point(782, 54)
+        btnBrowseIn.Location = New Point(406, 28)
+        btnBrowseIn.Margin = New Padding(2, 1, 2, 1)
         btnBrowseIn.Name = "btnBrowseIn"
-        btnBrowseIn.Size = New Size(137, 42)
+        btnBrowseIn.Size = New Size(74, 23)
         btnBrowseIn.TabIndex = 18
-        btnBrowseIn.Text = "Button1"
+        btnBrowseIn.Text = "Open"
         btnBrowseIn.UseVisualStyleBackColor = True
         ' 
         ' Label1
         ' 
         Label1.AutoSize = True
-        Label1.Location = New Point(24, 19)
+        Label1.Location = New Point(13, 9)
+        Label1.Margin = New Padding(2, 0, 2, 0)
         Label1.Name = "Label1"
-        Label1.Size = New Size(121, 32)
+        Label1.Size = New Size(60, 15)
         Label1.TabIndex = 17
         Label1.Text = "Cartella In"
         ' 
         ' txtInDir
         ' 
-        txtInDir.Location = New Point(24, 54)
+        txtInDir.Location = New Point(13, 28)
+        txtInDir.Margin = New Padding(2, 1, 2, 1)
         txtInDir.Name = "txtInDir"
-        txtInDir.Size = New Size(719, 39)
+        txtInDir.Size = New Size(389, 23)
         txtInDir.TabIndex = 16
         ' 
         ' btnOk
         ' 
-        btnOk.Location = New Point(954, 51)
+        btnOk.Location = New Point(510, 182)
+        btnOk.Margin = New Padding(2, 1, 2, 1)
         btnOk.Name = "btnOk"
-        btnOk.Size = New Size(75, 45)
+        btnOk.Size = New Size(64, 39)
         btnOk.TabIndex = 26
         btnOk.Text = "Ok"
         btnOk.UseVisualStyleBackColor = True
         ' 
         ' btnClose
         ' 
-        btnClose.Location = New Point(969, 102)
+        btnClose.Location = New Point(510, 225)
+        btnClose.Margin = New Padding(2, 1, 2, 1)
         btnClose.Name = "btnClose"
-        btnClose.Size = New Size(111, 41)
+        btnClose.Size = New Size(64, 35)
         btnClose.TabIndex = 27
         btnClose.Text = "Chiudi"
         btnClose.UseVisualStyleBackColor = True
         ' 
         ' MagickExe
         ' 
-        MagickExe.Location = New Point(24, 364)
+        MagickExe.Location = New Point(13, 191)
+        MagickExe.Margin = New Padding(2, 1, 2, 1)
         MagickExe.Name = "MagickExe"
-        MagickExe.Size = New Size(520, 39)
+        MagickExe.Size = New Size(282, 23)
         MagickExe.TabIndex = 28
         ' 
         ' Label3
         ' 
         Label3.AutoSize = True
-        Label3.Location = New Point(24, 329)
+        Label3.Location = New Point(13, 175)
+        Label3.Margin = New Padding(2, 0, 2, 0)
         Label3.Name = "Label3"
-        Label3.Size = New Size(189, 32)
+        Label3.Size = New Size(94, 15)
         Label3.TabIndex = 29
         Label3.Text = "Convertitore Tiff"
         ' 
         ' Label5
         ' 
         Label5.AutoSize = True
-        Label5.Location = New Point(24, 406)
+        Label5.Location = New Point(13, 215)
+        Label5.Margin = New Padding(2, 0, 2, 0)
         Label5.Name = "Label5"
-        Label5.Size = New Size(133, 32)
+        Label5.Size = New Size(67, 15)
         Label5.TabIndex = 31
         Label5.Text = "Ghostscript"
         ' 
         ' GhostscriptExe
         ' 
-        GhostscriptExe.Location = New Point(24, 441)
+        GhostscriptExe.Location = New Point(13, 231)
+        GhostscriptExe.Margin = New Padding(2, 1, 2, 1)
         GhostscriptExe.Name = "GhostscriptExe"
-        GhostscriptExe.Size = New Size(520, 39)
+        GhostscriptExe.Size = New Size(282, 23)
         GhostscriptExe.TabIndex = 30
         ' 
         ' NumericUpDown
         ' 
-        NumericUpDown.Location = New Point(721, 442)
+        NumericUpDown.Location = New Point(359, 231)
+        NumericUpDown.Margin = New Padding(2, 1, 2, 1)
         NumericUpDown.Name = "NumericUpDown"
-        NumericUpDown.Size = New Size(102, 39)
+        NumericUpDown.Size = New Size(59, 23)
         NumericUpDown.TabIndex = 32
         ' 
         ' Label6
         ' 
         Label6.AutoSize = True
-        Label6.Location = New Point(608, 406)
+        Label6.Location = New Point(359, 209)
+        Label6.Margin = New Padding(2, 0, 2, 0)
         Label6.Name = "Label6"
-        Label6.Size = New Size(215, 32)
+        Label6.Size = New Size(107, 15)
         Label6.TabIndex = 33
         Label6.Text = "Compressione PDF"
         ' 
         ' btnTestMagick
         ' 
-        btnTestMagick.Location = New Point(560, 369)
+        btnTestMagick.Location = New Point(302, 191)
+        btnTestMagick.Margin = New Padding(2, 1, 2, 1)
         btnTestMagick.Name = "btnTestMagick"
-        btnTestMagick.Size = New Size(75, 38)
+        btnTestMagick.Size = New Size(40, 23)
         btnTestMagick.TabIndex = 34
         btnTestMagick.Text = "Test"
         btnTestMagick.UseVisualStyleBackColor = True
         ' 
         ' btnTestGhost
         ' 
-        btnTestGhost.Location = New Point(550, 443)
+        btnTestGhost.Location = New Point(302, 231)
+        btnTestGhost.Margin = New Padding(2, 1, 2, 1)
         btnTestGhost.Name = "btnTestGhost"
-        btnTestGhost.Size = New Size(75, 38)
+        btnTestGhost.Size = New Size(40, 23)
         btnTestGhost.TabIndex = 35
         btnTestGhost.Text = "Test"
         btnTestGhost.UseVisualStyleBackColor = True
         ' 
         ' txtArchiveDir
         ' 
-        txtArchiveDir.Location = New Point(24, 284)
+        txtArchiveDir.Location = New Point(13, 151)
+        txtArchiveDir.Margin = New Padding(2, 1, 2, 1)
         txtArchiveDir.Name = "txtArchiveDir"
-        txtArchiveDir.Size = New Size(719, 39)
+        txtArchiveDir.Size = New Size(389, 23)
         txtArchiveDir.TabIndex = 37
         ' 
         ' Label7
         ' 
         Label7.AutoSize = True
-        Label7.Location = New Point(24, 249)
+        Label7.Location = New Point(13, 135)
+        Label7.Margin = New Padding(2, 0, 2, 0)
         Label7.Name = "Label7"
-        Label7.Size = New Size(207, 32)
+        Label7.Size = New Size(104, 15)
         Label7.TabIndex = 36
         Label7.Text = "Cartella ARCHIVIO"
         ' 
         ' btnBrowseArchivio
         ' 
-        btnBrowseArchivio.Location = New Point(782, 280)
+        btnBrowseArchivio.Location = New Point(406, 150)
+        btnBrowseArchivio.Margin = New Padding(2, 1, 2, 1)
         btnBrowseArchivio.Name = "btnBrowseArchivio"
-        btnBrowseArchivio.Size = New Size(137, 47)
+        btnBrowseArchivio.Size = New Size(74, 22)
         btnBrowseArchivio.TabIndex = 38
-        btnBrowseArchivio.Text = "Button1"
+        btnBrowseArchivio.Text = "Open"
         btnBrowseArchivio.UseVisualStyleBackColor = True
+        ' 
+        ' Label8
+        ' 
+        Label8.AutoSize = True
+        Label8.Location = New Point(13, 273)
+        Label8.Margin = New Padding(2, 0, 2, 0)
+        Label8.Name = "Label8"
+        Label8.Size = New Size(27, 15)
+        Label8.TabIndex = 39
+        Label8.Text = "Log"
         ' 
         ' FrmSettings
         ' 
-        AutoScaleDimensions = New SizeF(13F, 32F)
+        AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
-        ClientSize = New Size(1119, 971)
+        ClientSize = New Size(605, 536)
+        Controls.Add(Label8)
         Controls.Add(btnBrowseArchivio)
         Controls.Add(txtArchiveDir)
         Controls.Add(Label7)
@@ -270,6 +305,7 @@ Partial Class FrmSettings
         Controls.Add(Label1)
         Controls.Add(txtInDir)
         FormBorderStyle = FormBorderStyle.FixedToolWindow
+        Margin = New Padding(2, 1, 2, 1)
         Name = "FrmSettings"
         Text = "Settaggi"
         CType(NumericUpDown, ComponentModel.ISupportInitialize).EndInit()
@@ -300,4 +336,5 @@ Partial Class FrmSettings
     Friend WithEvents txtArchiveDir As TextBox
     Friend WithEvents Label7 As Label
     Friend WithEvents btnBrowseArchivio As Button
+    Friend WithEvents Label8 As Label
 End Class
